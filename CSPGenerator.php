@@ -1,6 +1,6 @@
 <?php 
 /*
-Copyright (c) 2015, Tom
+Copyright (c) 2014-2015, Tom
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted 
@@ -104,7 +104,7 @@ class CSPGenerator {
     public function Parse() {
         $useragentinfo = $this->getBrowserInfo();
         if ($useragentinfo['browser'] === 'chrome') {
-            // Disable content security policy volation reporting if chrome is used
+            // Disable content security policy violation reporting if chrome is used
             // because google chrome is causing false positives with google translate translating the page.
             $this->reporturi = NULL;
         }
