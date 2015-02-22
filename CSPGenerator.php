@@ -222,7 +222,7 @@ class CSPGenerator {
             // ALLOW-FROM Not supported in Chrome or Safari or Opera and any Firefox less than version 18.0 and any Internet Explorer browser less than version 9.0. (source: http://erlend.oftedal.no/blog/tools/xframeoptions/)
             if (($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 18) || 
                 ($useragentinfo['browser'] === 'msie' && $useragentinfo['version'] >= 9)) {
-                header('X-Frame-Options: ALLOW-FROM ' . $framesrc, TRUE);
+                header('X-Frame-Options: ALLOW-FROM ' . $this->framesrc, TRUE);
             }
         }
 
