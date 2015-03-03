@@ -25,9 +25,9 @@ if (!empty(filter_input(INPUT_GET, 'getresponse'))) {
     </head>
     <body>
 
-        <div id="result">..</div>
+        <div id="result">..  <noscript>javascript not enabled!</noscript></div>
 
-        <script type="text/javascript">
+        <script type="application/javascript">
 var xmlhttp = new XMLHttpRequest();
 xmlhttp.onreadystatechange = function() {
     if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {

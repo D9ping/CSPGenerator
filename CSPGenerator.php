@@ -38,6 +38,8 @@ class CSPGenerator {
 
     private $scriptsrc = " 'self'";
 
+    private $scriptsrcnonce = '';
+
     private $connectsrc = '';
 
     private $mediasrc = '';
@@ -46,6 +48,10 @@ class CSPGenerator {
 
     private $framesrc = '';
 
+    private $childsrc = '';
+
+    private $frameancestors = '';
+
     private $objectsrc = '';
 
     private $plugintypes = '';
@@ -53,6 +59,8 @@ class CSPGenerator {
     private $formaction = " 'self'";
 
     private $sandboxoptions = '';
+
+    private $reffererpolicy = '';
 
     private $reflectedxss = 'filter';
 
@@ -98,8 +106,8 @@ class CSPGenerator {
     }
 
     /**
-     * Parse user-agent header and set proper content security policy header and X-Frame-Options header
-     * and X-XSS-Protection header based on the browser and browser version.
+     * Parse user-agent header and set proper Content Security Policy header,
+     * X-Frame-Options header and X-XSS-Protection header based on the browser and browser version.
      */
     public function Parse() {
         $useragentinfo = $this->getBrowserInfo();
@@ -148,7 +156,11 @@ class CSPGenerator {
 
         if (!empty($this->scriptsrc)) {
             $cspheader .= '; script-src' . $this->scriptsrc;
-            // for iniline script with the X-Content-Security-Policy header use 'options inline-script'.
+            if (!empty($this->scriptsrcnonce)) {
+                $cspheader .= " 'nonce-" . $this->scriptsrcnonce . "'";
+            }
+
+            // for inline script with the X-Content-Security-Policy header use 'options inline-script'.
             if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] <= 22 && $useragentinfo['version'] >= 3.7) {
                 if (strpos($this->scriptsrc, "'unsafe-inline'") >= 0) {
                     $cspheader .= '; options inline-script';
@@ -178,18 +190,33 @@ class CSPGenerator {
             $cspheader .= '; font-src' . $this->fontsrc;
         }
 
-        if (!empty($this->framesrc)) {
+        if (!empty($this->childsrc)) {
+            // Experimental, CSP Level 2 only:
+            $cspheader .= '; child-src' . $this->childsrc;
+        } elseif (!empty($this->framesrc)) {
+            // CSP Level 1
             $cspheader .= '; frame-src' . $this->framesrc;
+        }
+
+        if (!empty($this->frameancestors)) {
+            // CSP 1.1
+            $cspheader .= '; frame-ancestors' . $this->frameancestors;
         }
 
         if (!empty($this->objectsrc)) {
             $cspheader .= '; object-src' . $this->objectsrc;
         }
 
+        // Experimental:
         if (!empty($this->plugintypes)) {
             if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 20) {
                 $cspheader .= '; plugin-types' . $this->plugintypes;
             }
+        }
+
+        // Experimental:
+        if (!empty($this->reffererpolicy)) {
+            $cspheader .= '; refferer ' . $this->reffererpolicy;
         }
 
         // Experimental:
@@ -213,11 +240,14 @@ class CSPGenerator {
         }
 
         header($cspheader, TRUE);
-        // Add X-Frame-Options header based on the content security policy settings.
-        if (empty($this->framesrc) || strpos($this->framesrc, "'none'") >= 0) {
+        // Add X-Frame-Options header based on the content security policy frame-ancestors directive.
+        if (strpos($this->frameancestors, "'none'") >= 0 ||
+            empty($this->frameancestors) && strpos($this->defaultsrc, "'none'") >= 0) {
             header('X-Frame-Options: DENY', TRUE);
-        } elseif (strpos($this->framesrc, "'self'") >= 0) {
+        } elseif (strpos($this->frameancestors, "'self'") >= 0 || empty($this->frameancestors)) {
             header('X-Frame-Options: SAMEORIGIN', TRUE);
+        } elseif (strpos($this->frameancestors, ' *') >= 0) {
+            header('X-Frame-Options: ALLOW', TRUE);
         } else {
             // ALLOW-FROM Not supported in Chrome or Safari or Opera and any Firefox less than version 18.0 and any Internet Explorer browser less than version 9.0. (source: http://erlend.oftedal.no/blog/tools/xframeoptions/)
             if (($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 18) || 
@@ -291,7 +321,24 @@ class CSPGenerator {
     }
 
     /**
-     * Add style-src content security policy directive.
+     * Set the refferer policy, this will change the behavoir how the user-agent sends the referrer header for your origin.
+     * @param string the refferer policy can be: "never", "default", "origin" or "always". 
+     * Note: "always" will send the full referrer on HTTP coming from a HTTPS referrer site this is a security issue for session urls.
+     */
+    public function setReferrerPolicy($reffererpolicy) {
+        if ($reffererpolicy === 'never' ||
+            $reffererpolicy === 'default' ||
+            $reffererpolicy === 'origin' ||
+            $reffererpolicy === 'always') {
+            $this->reffererpolicy = $reffererpolicy;
+        } else {
+            throw new Exception('CSP referrer policy unknown.');
+        }
+    }
+
+    /**
+     * Add style-src Content Security Policy Level 1 directive.
+     * In Content Security Policy Level 2, the use of 'none-$nonce' and 'sha256-$hash' is allowed for whitelisted inline style= use.
      * @param string $stylesrc The style-src policy directive to add. Where to allow CSS files from use 'unsafe-inline' for style attributes in (X)HTML document.
      */
     public function addStylesrc($stylesrc) {
@@ -301,7 +348,7 @@ class CSPGenerator {
     }
 
     /**
-     * Add image-src content security policy directive.
+     * Add image-src Content Security Policy Level 1 directive.
      * @param string $imagesrc The image-src policy directive to add. Where to allow images from. Use data: for base64 data url images.
      */
     public function addImagesrc($imagesrc) {
@@ -311,7 +358,8 @@ class CSPGenerator {
     }
 
     /**
-     * Add script-src content security policy directive.
+     * Add script-src Content Security Policy Level 1 directive.
+     * In Content Security Policy Level 2, the use of 'none-$nonce' and 'sha256-$hash' is allowed for whitelisted inline style= use.
      * @param string $scriptsrc The script-src policy directive to add. Use 'unsafe-inline' to allow unsafe loading of iniline scripts, use 'unsafe-eval' to allow text-to-JavaScript mechanisms like eval.
      */
     public function addScriptsrc($scriptsrc) {
@@ -321,7 +369,40 @@ class CSPGenerator {
     }
 
     /**
-     * Add connect-src content security policy directive.
+     * Set a new script nonce.
+     * @param bool $enablenonce Is the use of a nonces for allowed inline scripts enabled.
+     * @param int  $lengthnonce The length of the nonce.
+     */
+    public function setScriptsrcNonce($enablenonce = TRUE, $lengthnonce = 20) {
+        if ($lengthnonce < 8) {
+            throw new Exception('The nonce length needs to be at least 8 characters.');
+        }
+
+        if ($enablenonce) {
+            if (!function_exists('openssl_random_pseudo_bytes')) {
+                throw new Exception('No secure pseudo random generator available for generating nonce.');
+            }
+
+            $this->scriptsrcnonce = substr(base64_encode(openssl_random_pseudo_bytes($lengthnonce)), 0, $lengthnonce);
+        } else {
+            $this->scriptsrcnonce = '';
+        }
+    }
+
+    /**
+     * Get the current script-src nonce.
+     * @return string
+     */
+    public function getScriptsrcNonce() {
+        if (empty($this->scriptsrcnonce)) {
+            throw new Exception('No script-src nonce used.');
+        }
+
+        return $this->scriptsrcnonce;
+    }
+
+    /**
+     * Add connect-src Content Security Policy Level 1 directive.
      * @param string $connectsrc The connect-src policy directive to add. Where to allow XMLHttpRequest to connect to.
      */
     public function addConnectsrc($connectsrc) {
@@ -331,7 +412,7 @@ class CSPGenerator {
     }
 
     /**
-     * Add media-src content security policy directive.
+     * Add media-src Content Security Policy Level 1 directive.
      * @param string $mediasrc The media-src policy directive to add. Where to allow to load video/audio sources from. Use mediastream: for the MediaStream API. 
      */
     public function addMediasrc($mediasrc) {
@@ -341,7 +422,7 @@ class CSPGenerator {
     }
 
     /**
-     * Add font-src content security policy directive.
+     * Add font-src Content Security Policy Level 1 directive.
      * @param string $fontsrc The font-src policy directive to add. Where to allow to load font files from.
      */
     public function addFontsrc($fontsrc) {
@@ -351,7 +432,8 @@ class CSPGenerator {
     }
 
     /**
-     * Add frame-src content security policy directive.
+     * Add frame-src Content Security Policy Level 1 directive.
+     * note: frame-src is decreated in Content Security Policy Level 2 in favor of the child-src directive.
      * @param string $framesrc The frame-src policy directive to add. Where to allow to load frames/iframe from.
      */
     public function addFramesrc($framesrc) {
@@ -361,7 +443,27 @@ class CSPGenerator {
     }
 
     /**
-     * Add object-src content security policy directive.
+     * Add the child-src Content Security Policy Level 2 directive. (Experimental Directive)
+     * note: This directive also applies to the decreated frame-src directive.
+     */
+    public function addChildsrc($childsrc) {
+        if (strpos($this->childsrc, $childsrc) === FALSE) {
+            $this->childsrc .= ' ' . $childsrc;
+        }
+    }
+
+    /**
+     * Add the frame-ancestors Content Security Policy Level 2 directive. (Experimental Directive)
+     * This directive does the same as the X-Frame-Options header.
+     */
+    public function addFrameancestors($frameancestors) {
+        if (strpos($this->frameancestors, $frameancestors) === FALSE) {
+            $this->frameancestors .= ' ' . $frameancestors;
+        }
+    }
+
+    /**
+     * Add object-src Content Security Policy Level 1 directive.
      * @param string $objectsrc The object-src policy directive to add. Where to allow to load plugins objects like flash/java applets from.
      */
     public function addObjectsrc($objectsrc) {
@@ -371,7 +473,7 @@ class CSPGenerator {
     }
 
     /**
-     * Add plugin-types content security policy 1.1>= directive. (Experimental Directive)
+     * Add plugin-types Content Security Policy Level 2 directive. (Experimental Directive)
      * @param string $plugintypes The plugin-types policy directive to add. A list of MIME types (e.g. application/x-shockwave-flash) of plugins allowed to load.
      */
     public function addPlugintypes($plugintypes) {
@@ -381,7 +483,7 @@ class CSPGenerator {
     }
 
     /**
-     * Add form-action content security policy 1.1>= directive. (Experimental Directive)
+     * Add form-action Content Security Policy Level 2 directive. (Experimental Directive)
      * @param string $formaction The form-action policy directive to add. Restricts which URIs can be used as the action of HTML form elements.
      */
     public function addFormaction($formaction) {
@@ -391,12 +493,21 @@ class CSPGenerator {
     }
 
     /**
-     * Add sandbox options to the sandbox content security policy 1.1>= directive.
+     * Add sandbox options to the sandbox Content Security Policy directive.
      * @param string $sandboxoption The sandbox policy directive to add. This can be: allow-forms, allow-pointer-lock, allow-popups, allow-same-origin, allow-scripts or allow-top-navigation.
      */
     public function addSandboxoption($sandboxoption) {
-        if (strpos($this->sandboxoptions, $sandboxoption) === FALSE) {
-            $this->sandboxoptions .= ' ' . $sandboxoption;
+        if ($sandboxoption === 'allow-forms' ||
+            $sandboxoption === 'allow-pointer-lock' ||
+            $sandboxoption === 'allow-popups' ||
+            $sandboxoption === 'allow-same-origin' ||
+            $sandboxoption === 'allow-scripts' ||
+            $sandboxoption === 'allow-top-navigation') {
+            if (strpos($this->sandboxoptions, $sandboxoption) === FALSE) {
+                $this->sandboxoptions .= ' ' . $sandboxoption;
+            }
+        } else {
+            throw new Exception('CSP sandbox option directive unknown.');
         }
     }
 }

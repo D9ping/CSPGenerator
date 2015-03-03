@@ -1,6 +1,6 @@
 <?php
 require_once('CSPGenerator.php');
-// Allow use of style="..." iniline CSS.
+// Allow use of style="..." inline CSS.
 CSPGenerator::getInstance()->addStylesrc("'unsafe-inline'");
 
 
