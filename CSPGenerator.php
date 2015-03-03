@@ -64,6 +64,8 @@ class CSPGenerator {
 
     private $reflectedxss = 'filter';
 
+    private $baseuri = '';
+
     private $reporturi = '';
 
     /**
@@ -191,10 +193,10 @@ class CSPGenerator {
         }
 
         if (!empty($this->childsrc)) {
-            // Experimental, CSP Level 2 only:
+            // Experimental, CSP Level 2:
             $cspheader .= '; child-src' . $this->childsrc;
         } elseif (!empty($this->framesrc)) {
-            // CSP Level 1
+            // CSP 1.0
             $cspheader .= '; frame-src' . $this->framesrc;
         }
 
@@ -215,23 +217,36 @@ class CSPGenerator {
         }
 
         // Experimental:
+        // /*
         if (!empty($this->reffererpolicy)) {
             $cspheader .= '; refferer ' . $this->reffererpolicy;
         }
+        // */
 
         // Experimental:
-        //if (!empty($this->formaction)) {
-        //    if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 25) {
-        //        $cspheader .= '; form-action' . $this->formaction;
-        //   }
-        //}
+        /*
+        if (!empty($this->formaction)) {
+            if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 25) {
+                $cspheader .= '; form-action' . $this->formaction;
+           }
+        }
+        */
 
         // Experimental:
-        //if (!empty($this->reflectedxss)) {
-        //    if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 25) {
-        //        $cspheader .= '; reflected-xss ' . $this->reflectedxss;
-        //    }
-        //}
+        /*
+        if (!empty($this->reflectedxss)) {
+           if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 25) {
+                $cspheader .= '; reflected-xss ' . $this->reflectedxss;
+            }
+        }
+        */
+
+        // Experimental:
+        // /*
+        if (!empty($this->baseuri)) {
+            $cspheader .= '; base-uri' . $this->baseuri;
+        }
+        // */
 
         if (!empty($this->reporturi)) {
             if ($useragentinfo['browser'] !== 'firefox' || $useragentinfo['version'] > 22) {
@@ -252,7 +267,7 @@ class CSPGenerator {
             // ALLOW-FROM Not supported in Chrome or Safari or Opera and any Firefox less than version 18.0 and any Internet Explorer browser less than version 9.0. (source: http://erlend.oftedal.no/blog/tools/xframeoptions/)
             if (($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 18) || 
                 ($useragentinfo['browser'] === 'msie' && $useragentinfo['version'] >= 9)) {
-                header('X-Frame-Options: ALLOW-FROM ' . $this->framesrc, TRUE);
+                header('X-Frame-Options: ALLOW-FROM ' . $this->frameancestors, TRUE);
             }
         }
 
@@ -322,8 +337,8 @@ class CSPGenerator {
 
     /**
      * Set the refferer policy, this will change the behavoir how the user-agent sends the referrer header for your origin.
-     * @param string the refferer policy can be: "never", "default", "origin" or "always". 
-     * Note: "always" will send the full referrer on HTTP coming from a HTTPS referrer site this is a security issue for session urls.
+     * @param string $reffererpolicy The refferer policy can be: "never", "default", "origin" or "always". 
+     * Note: "always" will send the full referrer on HTTP when coming from a HTTPS site this is a security and privacy issue.
      */
     public function setReferrerPolicy($reffererpolicy) {
         if ($reffererpolicy === 'never' ||
@@ -337,8 +352,8 @@ class CSPGenerator {
     }
 
     /**
-     * Add style-src Content Security Policy Level 1 directive.
-     * In Content Security Policy Level 2, the use of 'none-$nonce' and 'sha256-$hash' is allowed for whitelisted inline style= use.
+     * Add style-src Content Security Policy 1.0 directive.
+     * In Content Security Policy Level 1.1 and Level 2, the use of 'none-$nonce' and 'sha256-$hash' is allowed for whitelisted inline style= use.
      * @param string $stylesrc The style-src policy directive to add. Where to allow CSS files from use 'unsafe-inline' for style attributes in (X)HTML document.
      */
     public function addStylesrc($stylesrc) {
@@ -348,7 +363,7 @@ class CSPGenerator {
     }
 
     /**
-     * Add image-src Content Security Policy Level 1 directive.
+     * Add image-src Content Security Policy 1.0 directive.
      * @param string $imagesrc The image-src policy directive to add. Where to allow images from. Use data: for base64 data url images.
      */
     public function addImagesrc($imagesrc) {
@@ -358,8 +373,8 @@ class CSPGenerator {
     }
 
     /**
-     * Add script-src Content Security Policy Level 1 directive.
-     * In Content Security Policy Level 2, the use of 'none-$nonce' and 'sha256-$hash' is allowed for whitelisted inline style= use.
+     * Add script-src Content Security Policy 1.0 directive.
+     * In Content Security Policy 1.1 and Level 2, the use of 'none-$nonce' and 'sha256-$hash' is allowed for whitelisted inline scripts.
      * @param string $scriptsrc The script-src policy directive to add. Use 'unsafe-inline' to allow unsafe loading of iniline scripts, use 'unsafe-eval' to allow text-to-JavaScript mechanisms like eval.
      */
     public function addScriptsrc($scriptsrc) {
@@ -370,8 +385,10 @@ class CSPGenerator {
 
     /**
      * Set a new script nonce.
-     * @param bool $enablenonce Is the use of a nonces for allowed inline scripts enabled.
-     * @param int  $lengthnonce The length of the nonce.
+     * @param bool $enablenonce Is the use of a nonces enabled for allowing inline scripts. 
+     *                          Set to TRUE to add a random 'nonce-$random' to script-src directive
+     *                          and set to FALSE to remove 'nonce-$random' from the script-src directive.
+     * @param int  $lengthnonce The length of the new nonce.
      */
     public function setScriptsrcNonce($enablenonce = TRUE, $lengthnonce = 20) {
         if ($lengthnonce < 8) {
@@ -391,7 +408,7 @@ class CSPGenerator {
 
     /**
      * Get the current script-src nonce.
-     * @return string
+     * @return string The nonce string.
      */
     public function getScriptsrcNonce() {
         if (empty($this->scriptsrcnonce)) {
@@ -445,6 +462,7 @@ class CSPGenerator {
     /**
      * Add the child-src Content Security Policy Level 2 directive. (Experimental Directive)
      * note: This directive also applies to the decreated frame-src directive.
+     * @param string $childsrc The child-src policy directive to add. Where webworkers and frames/iframe are allowed to load from.
      */
     public function addChildsrc($childsrc) {
         if (strpos($this->childsrc, $childsrc) === FALSE) {
@@ -455,15 +473,27 @@ class CSPGenerator {
     /**
      * Add the frame-ancestors Content Security Policy Level 2 directive. (Experimental Directive)
      * This directive does the same as the X-Frame-Options header.
+     * @param string $frameancestors The frame-ancestors policy directive to add.
+     *                               'self' is the same as X-Frame-Options: SAMEORIGIN,
+     *                               'none' is the same as X-Frame-Options: DENY,
+     *                                   *  is the same as X-Frame-Options: ALLOW
      */
     public function addFrameancestors($frameancestors) {
+        if ($frameancestors === 'DENY') {
+            throw new Exception("Use 'none'.");
+        } elseif ($frameancestors === 'SAMEORIGIN') {
+            throw new Exception("Use 'self'.");
+        } elseif ($frameancestors === 'ALLOW') {
+            throw new Exception("Use *.");
+        }
+
         if (strpos($this->frameancestors, $frameancestors) === FALSE) {
             $this->frameancestors .= ' ' . $frameancestors;
         }
     }
 
     /**
-     * Add object-src Content Security Policy Level 1 directive.
+     * Add object-src Content Security Policy 1.0 directive.
      * @param string $objectsrc The object-src policy directive to add. Where to allow to load plugins objects like flash/java applets from.
      */
     public function addObjectsrc($objectsrc) {
@@ -474,7 +504,8 @@ class CSPGenerator {
 
     /**
      * Add plugin-types Content Security Policy Level 2 directive. (Experimental Directive)
-     * @param string $plugintypes The plugin-types policy directive to add. A list of MIME types (e.g. application/x-shockwave-flash) of plugins allowed to load.
+     * @param string $plugintypes The plugin-types policy directive to add. A list of MIME types
+     *         (e.g. application/x-shockwave-flash, application/pdf) of plugins allowed to load.
      */
     public function addPlugintypes($plugintypes) {
         if (strpos($this->plugintypes, $plugintypes) === FALSE) {
@@ -493,7 +524,18 @@ class CSPGenerator {
     }
 
     /**
-     * Add sandbox options to the sandbox Content Security Policy directive.
+     * Add base-uri Content Security Policy 1.1 directive. (Experimental Directive)
+     * note: this directive is by default not restricted by default-src directive.
+     * @param string $baseuri The base-uri policy directive to add. Defines the URIs that a user agent may use as the document base URL.
+     */
+    public function addBaseuri($baseuri) {
+        if (strpos($this->baseuri, $baseuri) === FALSE) {
+            $this->baseuri .= ' ' . $baseuri;
+        }
+    }
+
+    /**
+     * Add sandbox options to the sandbox Content Security Policy 1.0 directive.
      * @param string $sandboxoption The sandbox policy directive to add. This can be: allow-forms, allow-pointer-lock, allow-popups, allow-same-origin, allow-scripts or allow-top-navigation.
      */
     public function addSandboxoption($sandboxoption) {
