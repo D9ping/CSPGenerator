@@ -15,6 +15,6 @@ CSPGenerator::getInstance()->Parse();
     </head>
     <body>
         <!-- The following text is allowed to be centred because 'unsafe-inline' is added the CSP header. -->
-        <p style="text-align: center">testing iniline css</p>
+        <p style="text-align: center">testing inline css use</p>
     </body>
 </html>
