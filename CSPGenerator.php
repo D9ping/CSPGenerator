@@ -60,7 +60,7 @@ class CSPGenerator {
 
     private $sandboxoptions = '';
 
-    private $reffererpolicy = '';
+    private $referrerpolicy = '';
 
     private $reflectedxss = 'filter';
 
@@ -87,6 +87,7 @@ class CSPGenerator {
 
     /**
      * Set the url to where to report violations of the Content Security Policy.
+     * @param $string $reporturi The uri to report the Content Security Policy violation reports on.
      */
     public function setReporturi($reporturi) {
         $this->reporturi = $reporturi;
@@ -97,14 +98,6 @@ class CSPGenerator {
      */
     public function setReportOnly() {
         $this->reportonly = TRUE;
-    }
-
-    /**
-     * Set reflected-xss content security policy 1.1>= policy setting. (Experimental directive)
-     * @param string $reflectedxss The experimental reflected-xss policy directive. This can be allow, filter(default) or block.
-     */
-    public function setReflectedxss($reflectedxss) {
-        $this->reflectedxss = $reflectedxss;
     }
 
     /**
@@ -218,28 +211,30 @@ class CSPGenerator {
 
         // Experimental:
         // /*
-        if (!empty($this->reffererpolicy)) {
-            $cspheader .= '; refferer ' . $this->reffererpolicy;
+        if (!empty($this->referrerpolicy)) {
+            $cspheader .= '; referrer ' . $this->referrerpolicy;
         }
         // */
 
         // Experimental:
-        /*
+        // /*
         if (!empty($this->formaction)) {
-            if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 25) {
+            if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 25 ||
+                $useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 30) {
                 $cspheader .= '; form-action' . $this->formaction;
            }
         }
-        */
+        // */
 
         // Experimental:
-        /*
+        // /*
         if (!empty($this->reflectedxss)) {
-           if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 25) {
+           if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 25 ||
+               $useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 30) {
                 $cspheader .= '; reflected-xss ' . $this->reflectedxss;
-            }
+           }
         }
-        */
+        //*/
 
         // Experimental:
         // /*
@@ -336,22 +331,6 @@ class CSPGenerator {
     }
 
     /**
-     * Set the refferer policy, this will change the behavoir how the user-agent sends the referrer header for your origin.
-     * @param string $reffererpolicy The refferer policy can be: "never", "default", "origin" or "always". 
-     * Note: "always" will send the full referrer on HTTP when coming from a HTTPS site this is a security and privacy issue.
-     */
-    public function setReferrerPolicy($reffererpolicy) {
-        if ($reffererpolicy === 'never' ||
-            $reffererpolicy === 'default' ||
-            $reffererpolicy === 'origin' ||
-            $reffererpolicy === 'always') {
-            $this->reffererpolicy = $reffererpolicy;
-        } else {
-            throw new Exception('CSP referrer policy unknown.');
-        }
-    }
-
-    /**
      * Add style-src Content Security Policy 1.0 directive.
      * In Content Security Policy Level 1.1 and Level 2, the use of 'none-$nonce' and 'sha256-$hash' is allowed for whitelisted inline style= use.
      * @param string $stylesrc The style-src policy directive to add. Where to allow CSS files from use 'unsafe-inline' for style attributes in (X)HTML document.
@@ -388,7 +367,7 @@ class CSPGenerator {
      * @param bool $enablenonce Is the use of a nonces enabled for allowing inline scripts. 
      *                          Set to TRUE to add a random 'nonce-$random' to script-src directive
      *                          and set to FALSE to remove 'nonce-$random' from the script-src directive.
-     * @param int  $lengthnonce The length of the new nonce.
+     * @param int  $lengthnonce The length of the new nonce. It's recommended to use (at least)128 bits nonces, with All ASCII printable characters about 6.570 bits entroy per character.
      */
     public function setScriptsrcNonce($enablenonce = TRUE, $lengthnonce = 20) {
         if ($lengthnonce < 8) {
@@ -539,6 +518,7 @@ class CSPGenerator {
      * @param string $sandboxoption The sandbox policy directive to add. This can be: allow-forms, allow-pointer-lock, allow-popups, allow-same-origin, allow-scripts or allow-top-navigation.
      */
     public function addSandboxoption($sandboxoption) {
+        $sandboxoption = strtolower($sandboxoption);
         if ($sandboxoption === 'allow-forms' ||
             $sandboxoption === 'allow-pointer-lock' ||
             $sandboxoption === 'allow-popups' ||
@@ -549,7 +529,54 @@ class CSPGenerator {
                 $this->sandboxoptions .= ' ' . $sandboxoption;
             }
         } else {
-            throw new Exception('CSP sandbox option directive unknown.');
+            throw new Exception('CSP sandbox option unknown.');
+        }
+    }
+
+    /**
+     * Set the referrer policy, this will change the behavoir how the user-agent sends the referrer(HTTP field: referer (misspelled missing r)) header for your origin.
+     * @param string $referrerpolicy The referrer policy can be one of these values:
+     *                               "no-referrer"(obsolete policy name: "never"), do not send any http referrer header at all. Most privacy friendly, but not good choice as weak protection if implemented against CSRF.
+     *                               "no-referrer-when-downgrade"(obsolete policy name: "default"), default bevavior when no policy. Will send the full referrer but do not send referrer header when coming from https to protect you from dislosing your session url.
+     *                               "origin" only send the domain(e.g. www.example.tld) and not the query string path.(e.g. /page2.htm). A bit more privacy friendly than the full referrer.
+     *                               "unsafe-url"(obsolete policy name: "always"). Will always send the full referrer. This will also send the full referrer on HTTP when coming from a HTTPS site and that can be a security(session urls) and privacy issue.
+     */
+    public function setReferrerPolicy($referrerpolicy) {
+        switch (strtolower($referrerpolicy)) {
+            case 'default':
+            case 'no-referrer-when-downgrade':
+                $this->referrerpolicy = 'no-referrer-when-downgrade';
+                break;
+            case 'never':
+            case 'no-referrer':
+                $this->referrerpolicy = 'no-referrer';
+                break;
+            case 'origin':
+                $this->referrerpolicy = 'origin';
+                break;
+            case 'always':
+            case 'unsafe-url':
+                $this->referrerpolicy = 'unsafe-url';
+                break;
+            default:
+                throw new Exception('CSP referrer policy unknown.');
+                break;
+        }
+    }
+
+    /**
+     * Set reflected-xss content security policy 1.1>= policy setting. (Experimental directive)
+     * @param string $reflectedxss The reflected-xss policy. This can be:
+     *                             "allow" no url filtering, does the same as X-XSS-Protection: 0;
+     *                             "filter" filter detected unsafe url and display warning bar(with unsafe reload option) does the same as X-XSS-Protection: 1;
+     *                             "block" block with about:blank. Does the same as  X-XSS-Protection: 1; mode=block;
+     */
+    public function setReflectedxss($reflectedxss) {
+        $reflectedxss = strtolower($reflectedxss);
+        if ($reflectedxss === 'filter' || $reflectedxss === 'block' || $reflectedxss === 'allow') {
+            $this->reflectedxss = $reflectedxss;
+        } else {
+            throw new Exception('CSP reflectedxss directive value unknown.');
         }
     }
 }
