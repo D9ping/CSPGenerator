@@ -34,6 +34,8 @@ class CSPGenerator {
 
     private $stylesrc = " 'self'";
 
+    private $stylesrcnonce = '';
+
     private $imagesrc = " 'self'";
 
     private $scriptsrc = " 'self'";
@@ -67,6 +69,8 @@ class CSPGenerator {
     private $baseuri = '';
 
     private $reporturi = '';
+
+    const NONCEMINLENGTH = 10;
 
     /**
      * Create a new instance of CSPGenerator class.
@@ -143,6 +147,9 @@ class CSPGenerator {
         if (!empty($this->stylesrc)) {
             // The obsolete decreated X-Content-Security-Policy header does not support style-src. This is not implemented.
             $cspheader .= '; style-src' . $this->stylesrc;
+            if (!empty($this->stylesrcnonce)) {
+                $cspheader .= " 'nonce-" . $this->stylesrcnonce . "'";
+            }
         }
 
         if (!empty($this->imagesrc)) {
@@ -203,45 +210,47 @@ class CSPGenerator {
         }
 
         // Experimental:
+        // /*
         if (!empty($this->plugintypes)) {
-            if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 20) {
+            if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 27) {
                 $cspheader .= '; plugin-types' . $this->plugintypes;
             }
-        }
-
-        // Experimental:
-        // /*
-        if (!empty($this->referrerpolicy)) {
-            $cspheader .= '; referrer ' . $this->referrerpolicy;
         }
         // */
 
         // Experimental:
+        /*
+        if (!empty($this->referrerpolicy)) {
+            $cspheader .= '; referrer ' . $this->referrerpolicy;
+        }
+        */
+
+        // Experimental:
         // /*
         if (!empty($this->formaction)) {
-            if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 25 ||
-                $useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 30) {
+            if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 36 ||
+                $useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 27 ||
+                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 41) {
                 $cspheader .= '; form-action' . $this->formaction;
            }
         }
         // */
 
         // Experimental:
-        // /*
+        /*
         if (!empty($this->reflectedxss)) {
-           if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 25 ||
-               $useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 30) {
+           if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 27) {
                 $cspheader .= '; reflected-xss ' . $this->reflectedxss;
            }
         }
-        //*/
+        */
 
         // Experimental:
-        // /*
+        /*
         if (!empty($this->baseuri)) {
             $cspheader .= '; base-uri' . $this->baseuri;
         }
-        // */
+        */
 
         if (!empty($this->reporturi)) {
             if ($useragentinfo['browser'] !== 'firefox' || $useragentinfo['version'] > 22) {
@@ -367,22 +376,48 @@ class CSPGenerator {
      * @param bool $enablenonce Is the use of a nonces enabled for allowing inline scripts. 
      *                          Set to TRUE to add a random 'nonce-$random' to script-src directive
      *                          and set to FALSE to remove 'nonce-$random' from the script-src directive.
-     * @param int  $lengthnonce The length of the new nonce. It's recommended to use (at least)128 bits nonces, with All ASCII printable characters about 6.570 bits entroy per character.
+     * @param int  $noncelength The length of the new nonce. It's recommended to use (at least)128 bits nonces.
+      *                         With the use of all ASCII printable characters you get about 6.570 bits entropy per character.
      */
-    public function setScriptsrcNonce($enablenonce = TRUE, $lengthnonce = 20) {
-        if ($lengthnonce < 8) {
-            throw new Exception('The nonce length needs to be at least 8 characters.');
-        }
-
+    public function setScriptsrcNonce($enablenonce = TRUE, $noncelength = 20) {
         if ($enablenonce) {
-            if (!function_exists('openssl_random_pseudo_bytes')) {
-                throw new Exception('No secure pseudo random generator available for generating nonce.');
-            }
-
-            $this->scriptsrcnonce = substr(base64_encode(openssl_random_pseudo_bytes($lengthnonce)), 0, $lengthnonce);
+            $this->scriptsrcnonce = $this->generateNonce($noncelength);
         } else {
             $this->scriptsrcnonce = '';
         }
+    }
+
+    /**
+     * Set a new style nonce.
+     * @param bool $enablenonce Is the use of a nonces enabled for allowing inline styles. 
+     *                          Set to TRUE to add a random 'nonce-$random' to style-src directive
+     *                          and set to FALSE to remove 'nonce-$random' from the style-src directive.
+     * @param int  $noncelength The length of the new nonce. It's recommended to use (at least)128 bits nonces.
+     *                          With the use of all ASCII printable characters you get about 6.570 bits entropy per character.
+     */
+    public function setStylesrcNonce($enablenonce = TRUE, $noncelength = 20) {
+        if ($enablenonce) {
+            $this->stylesrcnonce = $this->generateNonce($noncelength);
+        } else {
+            $this->stylesrcnonce = '';
+        }
+    }
+
+    /**
+     * Generate a new nonce.
+     * @param int $noncelength The length of the nonce to generate.
+     * @return string A new nonce.
+     */
+    private function generateNonce($noncelength) {
+        if ($noncelength < self::NONCEMINLENGTH) {
+            throw new Exception(sprintf('The nonce length needs to be at least %1$d characters.', self::NONCEMINLENGTH));
+        }
+
+        if (!function_exists('openssl_random_pseudo_bytes')) {
+            throw new Exception('No secure pseudo random generator available for generating nonce.');
+        }
+
+        return substr(base64_encode(openssl_random_pseudo_bytes($noncelength)), 0, $noncelength);
     }
 
     /**
@@ -395,6 +430,18 @@ class CSPGenerator {
         }
 
         return $this->scriptsrcnonce;
+    }
+
+    /**
+     * Get the current style-src nonce.
+     * @return string The nonce string.
+     */
+    public function getStylesrcNonce() {
+        if (empty($this->stylesrcnonce)) {
+            throw new Exception('No style-src nonce used.');
+        }
+
+        return $this->stylesrcnonce;
     }
 
     /**
