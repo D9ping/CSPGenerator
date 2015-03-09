@@ -1,5 +1,5 @@
 <?php
-require_once('CSPGenerator.php');
+require_once('../CSPGenerator.php');
 
 // Allow use of AJAX to same origin.
 CSPGenerator::getInstance()->addConnectsrc("'self'");

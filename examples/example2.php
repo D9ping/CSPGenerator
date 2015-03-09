@@ -1,5 +1,5 @@
 <?php
-require_once('CSPGenerator.php');
+require_once('../CSPGenerator.php');
 // Allow images from files.phpclasses.org on any protocol(http,https,ftp).
 CSPGenerator::getInstance()->addImagesrc('files.phpclasses.org');
 

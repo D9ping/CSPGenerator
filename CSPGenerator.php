@@ -372,6 +372,17 @@ class CSPGenerator {
     }
 
     /**
+     * Add a new script-src hashcode for a script.
+     * @param string $sourcecode The exact sourcecode of the script to allow inline to be included in the page. 
+     *                           Don't forget linefeed(\n) and carriage return(\r) characters.
+     * @param string $hashalgo   The hashing algorithm to use, can be "sha256"(default), "sha384" or "sha512".
+     *                           SHA(2)-384 and SHA(2)-512 are optimized for 64bits processors+software.
+     */
+    public function addScriptsrcHash($sourcecode, $hashalgo = 'sha256') {
+        $this->addScriptsrc($this->generateSourceHash($sourcecode, $hashalgo));
+    }
+
+    /**
      * Set a new script nonce.
      * @param bool $enablenonce Is the use of a nonces enabled for allowing inline scripts. 
      *                          Set to TRUE to add a random 'nonce-$random' to script-src directive
@@ -388,6 +399,16 @@ class CSPGenerator {
     }
 
     /**
+     * Add a new style-src hash code.
+     * @param string $sourcecode The exact content of style tag.
+     * @param string $hashalgo   The hashing algorithm to use, can be "sha256"(default), "sha384" or "sha512".
+     *                           SHA(2)-384 and SHA(2)-512 are optimized for 64bits processors+software.
+     */
+    public function addStylesrcHash($sourcecode, $hashalgo = 'sha256') {
+        $this->addStylesrc($this->generateSourceHash($sourcecode, $hashalgo));
+    }
+
+    /**
      * Set a new style nonce.
      * @param bool $enablenonce Is the use of a nonces enabled for allowing inline styles. 
      *                          Set to TRUE to add a random 'nonce-$random' to style-src directive
@@ -401,6 +422,26 @@ class CSPGenerator {
         } else {
             $this->stylesrcnonce = '';
         }
+    }
+
+    /**
+     * Generate a new hash code.
+     * @param string $sourcecode The content to generate the hash from. \r characters are removed.
+     * @param string $hashalgo   The hashing algorithm to use, can be "sha256"(default), "sha384" or "sha512".
+     * @return string A new hash code as base64 with $hashalgo- prefix and wrapped around single quotes.
+     */
+    private function generateSourceHash($sourcecode, $hashalgo) {
+        if (!isset($sourcecode)) {
+            throw new Exception('Sourcecode is missing.');
+        }
+
+        if ($hashalgo !== 'sha256' && $hashalgo !== 'sha384' && $hashalgo !== 'sha512') {
+            throw new Exception(sprintf('Hashing algorithm %1$s not supported.', $hashalgo));
+        }
+
+        $sourcecode = str_replace("\r", '', $sourcecode); // remove \r to make it work.
+        $sourcehashbase64 = base64_encode(hash($hashalgo, $sourcecode, TRUE));
+        return "'" . $hashalgo . "-" . $sourcehashbase64 . "'";
     }
 
     /**

@@ -1,5 +1,6 @@
 <?php
-require_once('CSPGenerator.php');
+require_once('../CSPGenerator.php');
+
 // Add a style-src nonce.
 CSPGenerator::getInstance()->setStylesrcNonce();
 

@@ -1,5 +1,5 @@
 <?php
-require_once('CSPGenerator.php');
+require_once('../CSPGenerator.php');
 
 // Allow use of some inline JavaScript by the use of nonces.
 CSPGenerator::getInstance()->setScriptsrcNonce();
