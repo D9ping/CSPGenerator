@@ -46,6 +46,8 @@ class CSPGenerator {
 
     private $mediasrc = '';
 
+    private $manifestsrc = '';
+
     private $fontsrc = '';
 
     private $framesrc = '';
@@ -220,6 +222,13 @@ class CSPGenerator {
 
         // Experimental:
         /*
+        if (!empty($this->manifestsrc)) {
+            $cspheader .= '; manifest-src' . $this->manifestsrc;
+        }
+        */
+
+        // Experimental:
+        /*
         if (!empty($this->referrerpolicy)) {
             $cspheader .= '; referrer ' . $this->referrerpolicy;
         }
@@ -300,9 +309,9 @@ class CSPGenerator {
 
         // Clean up useragent and build regex that matches phrases for known browsers
         // (e.g. "Firefox/2.0" or "MSIE 6.0" (This only matches the major and minor
-        // version numbers.  E.g. "2.0.0.6" is parsed as simply "2.0"
+        // version numbers.  E.g. 2.0.0.6 is parsed as simply 2.0.
         if (!isset($_SERVER['HTTP_USER_AGENT'])) {
-            return array('browser' => 'unknown', 'version' => '-1.0');
+            return array('browser' => 'unknown', 'version' => -1.0);
         }
 
         $useragent = strtolower($_SERVER['HTTP_USER_AGENT']);
@@ -314,10 +323,10 @@ class CSPGenerator {
                 // feature detecting with javascript. This is not for HTTP headers possible, 
                 // because then the headers are already send. 
                 // source: http://blogs.msdn.com/b/ieinternals/archive/2013/09/21/internet-explorer-11-user-agent-string-ua-string-sniffing-compatibility-with-gecko-webkit.aspx
-                return array('browser' => 'msie', 'version' => '11');
+                return array('browser' => 'msie', 'version' => 11);
             } else {
                 // Unknow browser.
-                return array('browser' => 'unknown', 'version' => '-1.0');
+                return array('browser' => 'unknown', 'version' => -1.0);
             }
         }
 
@@ -502,6 +511,15 @@ class CSPGenerator {
     public function addMediasrc($mediasrc) {
         if (strpos($this->mediasrc, $mediasrc) === FALSE) {
             $this->mediasrc .= ' ' . $mediasrc;
+        }
+    }
+
+    /**
+     * Add manifest-src Security Policy Level 2 directive. (Experimental Directive)
+     */
+    public function addManifestsrc($manifestsrc) {
+        if (strpos($this->manifestsrc, $manifestsrc) === FALSE) {
+            $this->manifestsrc .= '' . $manifestsrc;
         }
     }
 
