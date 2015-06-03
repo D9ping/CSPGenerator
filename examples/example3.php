@@ -6,6 +6,7 @@ CSPGenerator::getInstance()->addConnectsrc("'self'");
 // Allow use of inline JavaScript. (Not recommended because doing this will not defeat the script 
 // in common JavaScript injections from running. But having other limited directives e.g. 
 // connect-src and default-src none, can still prevent some damage.)
+// note: script-src 'unsafe-inline' can be ignored by user-agent because it's unsafe. Thus inline script is blocked.
 CSPGenerator::getInstance()->addScriptsrc("'unsafe-inline'");
 
 
@@ -41,5 +42,6 @@ xmlhttp.send();
         </script>
 
     </body>
-</html><?php
+</html>
+<?php
 }

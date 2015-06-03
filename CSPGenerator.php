@@ -372,6 +372,7 @@ class CSPGenerator {
     /**
      * Add script-src Content Security Policy 1.0 directive.
      * In Content Security Policy 1.1 and Level 2, the use of 'none-$nonce' and 'sha256-$hash' is allowed for whitelisted inline scripts.
+     * 'unsafe-inline' can be ignored by user-agent because it's so unsafe.
      * @param string $scriptsrc The script-src policy directive to add. Use 'unsafe-inline' to allow unsafe loading of iniline scripts, use 'unsafe-eval' to allow text-to-JavaScript mechanisms like eval.
      */
     public function addScriptsrc($scriptsrc) {
