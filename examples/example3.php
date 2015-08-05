@@ -35,9 +35,9 @@ xmlhttp.onreadystatechange = function() {
         var xmldoc = xmlhttp.responseXML;
         document.getElementById("result").textContent = xmldoc.getElementsByTagName("response")[0].textContent;
     }
-}
+};
 
-xmlhttp.open('GET', 'example3.php?getresponse=1', true);
+xmlhttp.open('GET', '?getresponse=1', true);
 xmlhttp.send();
         </script>
 
