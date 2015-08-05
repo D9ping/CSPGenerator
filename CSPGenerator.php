@@ -30,6 +30,8 @@ class CSPGenerator {
 
     private $reportonly = FALSE;
 
+    private $upgradeinsecurerequests = FALSE;
+
     private $defaultsrc = " 'none'";
 
     private $stylesrc = " 'self'";
@@ -260,6 +262,14 @@ class CSPGenerator {
             $cspheader .= '; base-uri' . $this->baseuri;
         }
         */
+
+        // Experimental:
+        if ($this->upgradeinsecurerequests) {
+            if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 43 ||
+                $useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >=30) {
+                $cspheader .= '; upgrade-insecure-requests';
+            }
+        }
 
         if (!empty($this->reporturi)) {
             if ($useragentinfo['browser'] !== 'firefox' || $useragentinfo['version'] > 22) {
@@ -685,5 +695,16 @@ class CSPGenerator {
         } else {
             throw new Exception('CSP reflectedxss directive value unknown.');
         }
+    }
+
+    /**
+     * Set upgrade-insecure-requests content security policy 1.1>= policy directive. (Experimental, Working Draft directive)
+     * This directive makes the user-agent rewrite all resources starting with http:// request httpS:// resources on the page.
+     * Specifications: http://www.w3.org/TR/upgrade-insecure-requests/
+     * Demo page: https://googlechrome.github.io/samples/csp-upgrade-insecure-requests/index.html
+     * @param bool Should the upgrade-insecure-requests directive been added to the content security policy header.
+     */
+    public function setUpgradeInsecureRequests($upgradeinsecurerequests = TRUE) {
+        $this->upgradeinsecurerequests = $upgradeinsecurerequests;
     }
 }
