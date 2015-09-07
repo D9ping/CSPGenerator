@@ -1,7 +1,7 @@
 <?php
 require_once('../CSPGenerator.php');
 // Allow use of style="..." inline CSS.
-// Unsafe because can be a css inject can then control how the page looks.
+// Unsafe because a css injection can then control how the page looks.
 CSPGenerator::getInstance()->addStylesrc("'unsafe-inline'");
 // To avoid this it's recommended to use a stylesheets file instead and use classes and id's only in html.
 
