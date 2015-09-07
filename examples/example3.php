@@ -3,11 +3,7 @@ require_once('../CSPGenerator.php');
 
 // Allow use of AJAX to same origin.
 CSPGenerator::getInstance()->addConnectsrc("'self'");
-// Allow use of inline JavaScript. (Not recommended because doing this will not defeat the script 
-// in common JavaScript injections from running. But having other limited directives e.g. 
-// connect-src and default-src none, can still prevent some damage.)
-// note: script-src 'unsafe-inline' can be ignored by user-agent because it's unsafe. Thus inline script is blocked.
-CSPGenerator::getInstance()->addScriptsrc("'unsafe-inline'");
+CSPGenerator::getInstance()->addScriptsrc("'self'");
 
 
 // Set the headers, always call this method before any content output.
@@ -16,32 +12,18 @@ if (!empty(filter_input(INPUT_GET, 'getresponse'))) {
     header('X-Content-Type-Options: nosniff');
     header('Content-type: text/xml; charset=utf-8');
     echo '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\r\n";
-    echo '<response>Okay</response>';
+    echo '<response>Okay</response>' . "\r\n";
 } else {
 ?><!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>example3</title>
-    </head>
-    <body>
-
-        <div id="result">..  <noscript>javascript not enabled!</noscript></div>
-
-        <script type="application/javascript">
-var xmlhttp = new XMLHttpRequest();
-xmlhttp.onreadystatechange = function() {
-    if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
-        var xmldoc = xmlhttp.responseXML;
-        document.getElementById("result").textContent = xmldoc.getElementsByTagName("response")[0].textContent;
-    }
-};
-
-xmlhttp.open('GET', '?getresponse=1', true);
-xmlhttp.send();
-        </script>
-
-    </body>
+	<head>
+		<meta charset="UTF-8">
+		<title>example3 - allow ajax requests to same orgin</title>
+	</head>
+	<body>
+		<div id="result"><noscript>JavaScript not enabled.</noscript></div>
+		<script type="application/javascript" src="./example3.js"></script>
+	</body>
 </html>
 <?php
 }

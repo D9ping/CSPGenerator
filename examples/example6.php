@@ -1,7 +1,9 @@
 <?php
 require_once('../CSPGenerator.php');
 
-// e.g. allow inline google analytics javascript snippet:
+// E.g. allow inline google analytics javascript snippet.
+// The following javascript code needs hashed before the Content Security Policy
+// HTTP header is send to the client.
 $jscode = "
   var _gaq = _gaq || [];
   _gaq.push(['_setAccount', 'UA-XXXXXXXX']);
@@ -29,19 +31,16 @@ CSPGenerator::getInstance()->Parse();
 // Start content output.
 ?><!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>example6</title>
-    </head>
-    <body>
-
-    <!-- Whitelisted inline script: -->
-    <script type="application/javascript"><?php echo $jscode; ?></script>
-
-    <!-- Not whitelisted inline script: -->
-    <script type="application/javascript">
+	<head>
+		<meta charset="UTF-8">
+		<title>example6 - allow inline script with hash</title>
+	</head>
+	<body>
+	<!-- Whitelisted inline script: -->
+	<script type="application/javascript"><?php echo $jscode; ?></script>
+	<!-- Not whitelisted inline script: -->
+	<script type="application/javascript">
 alert('This should not popup.'); 
-    </script>
-
-    </body>
+	</script>
+	</body>
 </html>

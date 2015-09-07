@@ -114,13 +114,68 @@ class CSPGenerator {
      */
     public function Parse() {
         $useragentinfo = $this->getBrowserInfo();
-        if ($useragentinfo['browser'] === 'chrome') {
-            // Disable content security policy violation reporting if chrome is used
-            // because google chrome is causing false positives with google translate translating the page.
-            $this->reporturi = NULL;
+        $cspheader = $this->getUseragentContentSecurityPolicy($useragentinfo);
+        header($cspheader, TRUE);
+        // Add X-Frame-Options header based on the content security policy frame-ancestors directive.
+        if (strpos($this->frameancestors, "'none'") >= 0 ||
+            empty($this->frameancestors) && strpos($this->defaultsrc, "'none'") >= 0) {
+            header('X-Frame-Options: DENY', TRUE);
+        } elseif (strpos($this->frameancestors, "'self'") >= 0 || empty($this->frameancestors)) {
+            header('X-Frame-Options: SAMEORIGIN', TRUE);
+        } elseif (strpos($this->frameancestors, ' *') >= 0) {
+            header('X-Frame-Options: ALLOW', TRUE);
+        } else {
+            // ALLOW-FROM Not supported in Chrome or Safari or Opera and any Firefox less than version 18.0 and any Internet Explorer browser less than version 9.0. (source: http://erlend.oftedal.no/blog/tools/xframeoptions/)
+            if (($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 18) || 
+                ($useragentinfo['browser'] === 'msie' && $useragentinfo['version'] >= 9)) {
+                header('X-Frame-Options: ALLOW-FROM ' . $this->frameancestors, TRUE);
+            }
         }
 
+        // Add X-XSS-Protection header based on CSP 1.1 settings.
+        switch ($this->reflectedxss) {
+            case 'filter':
+                // filter is the prefered one, because mode=block can cause possible insecurity, source: http://homakov.blogspot.nl/2013/02/hacking-with-xss-auditor.html
+                header('X-XSS-Protection: 1', TRUE);
+                break;
+            case 'allow':
+                header('X-XSS-Protection: 0', TRUE);
+                break;
+            case 'block':
+                header('X-XSS-Protection: 1; mode=block', TRUE);
+                break;
+        }
+    }
+
+    /**
+     * Get the (X)HTML META tag for defining the Content Security Policy.
+     * frame-ancestors, report-uri, or sandbox directive will not work in the META tag.
+     * Because several directives cannot work in META tag it's recommended to use
+     * HTTP header instead if possible.
+     */
+    public function getMetatagContentSecurityPolicy() {
+        $cspheader = $this->getUseragentContentSecurityPolicy($this->getBrowserInfo());
+        $csp = explode(': ', $cspheader, 2);
+        $cspmetatag = '<meta http-equiv="';
+        $cspmetatag .= $csp[0];
+        $cspmetatag .= '" content="';
+        $cspmetatag .= $csp[1];
+        $cspmetatag .= '" />' . "\r\n";
+        return $cspmetatag;
+    }
+
+    /**
+     * Get the Content Security Policy that is supported/compatible with the current user-agent.
+     */
+    private function getUseragentContentSecurityPolicy($useragentinfo) {
         $cspheader = 'Content-Security-Policy: ';
+        if ($useragentinfo['browser'] === 'chrome') {
+            // Whitelist google translate, because it's commonly enabled and used:
+            $this->addConnectsrc('https://translate.googleapis.com');
+            // unsafe-inline is needed for google translate to display the content:
+            $this->addStylesrc("'unsafe-inline'");
+        }
+
         if ($this->reportonly) {
             $cspheader = 'Content-Security-Policy-Report-Only: ';
         }
@@ -277,36 +332,7 @@ class CSPGenerator {
             }
         }
 
-        header($cspheader, TRUE);
-        // Add X-Frame-Options header based on the content security policy frame-ancestors directive.
-        if (strpos($this->frameancestors, "'none'") >= 0 ||
-            empty($this->frameancestors) && strpos($this->defaultsrc, "'none'") >= 0) {
-            header('X-Frame-Options: DENY', TRUE);
-        } elseif (strpos($this->frameancestors, "'self'") >= 0 || empty($this->frameancestors)) {
-            header('X-Frame-Options: SAMEORIGIN', TRUE);
-        } elseif (strpos($this->frameancestors, ' *') >= 0) {
-            header('X-Frame-Options: ALLOW', TRUE);
-        } else {
-            // ALLOW-FROM Not supported in Chrome or Safari or Opera and any Firefox less than version 18.0 and any Internet Explorer browser less than version 9.0. (source: http://erlend.oftedal.no/blog/tools/xframeoptions/)
-            if (($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 18) || 
-                ($useragentinfo['browser'] === 'msie' && $useragentinfo['version'] >= 9)) {
-                header('X-Frame-Options: ALLOW-FROM ' . $this->frameancestors, TRUE);
-            }
-        }
-
-        // Add X-XSS-Protection header based on CSP 1.1 settings.
-        switch ($this->reflectedxss) {
-            case 'filter':
-                // filter is the prefered one, because mode=block can cause possible insecurity, source: http://homakov.blogspot.nl/2013/02/hacking-with-xss-auditor.html
-                header('X-XSS-Protection: 1', TRUE);
-                break;
-            case 'allow':
-                header('X-XSS-Protection: 0', TRUE);
-                break;
-            case 'block':
-                header('X-XSS-Protection: 1; mode=block', TRUE);
-                break;
-        }
+        return $cspheader;
     }
 
     /**

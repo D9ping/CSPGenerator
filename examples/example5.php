@@ -10,29 +10,29 @@ CSPGenerator::getInstance()->Parse();
 // Start content output.
 ?><!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>example5</title>
-        <!-- Because of valid nonce the following css should be applied. -->
-        <style type="text/css" nonce="<?php echo CSPGenerator::getInstance()->getStylesrcNonce(); ?>">
+	<head>
+		<meta charset="UTF-8">
+		<title>example5 - allow inline css with nonce</title>
+		<!-- Because of valid nonce the following css should be applied. -->
+		<style type="text/css" nonce="<?php echo CSPGenerator::getInstance()->getStylesrcNonce(); ?>">
 .hidetext {
     visibility: hidden;
 }
 .bigtext {
     font-size: 16pt;
 }
-        </style>
-        <!-- Because of invalid nonce the following css should not be applied. -->
-        <style type="text/css" nonce="deliberately_invalid_nonce">
+		</style>
+		<!-- Because of invalid nonce the following css should not be applied. -->
+		<style type="text/css" nonce="deliberately_invalid_nonce">
 .hidetext {
     visibility: visible !important;
     color: #FF2121;
     font-size: 16pt;
 }
-        </style>
-    </head>
-    <body>
-        <span class="hidetext">not</span>
-        <span class="bigtext">working</span>
-    </body>
+		</style>
+	</head>
+	<body>
+		<span class="hidetext">not</span>
+		<span class="bigtext">working</span>
+	</body>
 </html>
