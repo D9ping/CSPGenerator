@@ -114,6 +114,7 @@ class CSPGenerator {
      */
     public function Parse() {
         $useragentinfo = $this->getBrowserInfo();
+        //header('X-DebugDetectBrowser: ' . $useragentinfo['browser']);
         $cspheader = $this->getUseragentContentSecurityPolicy($useragentinfo);
         header($cspheader, TRUE);
         // Add X-Frame-Options header based on the content security policy frame-ancestors directive.
@@ -312,24 +313,24 @@ class CSPGenerator {
         */
 
         // Experimental:
-        /*
         if (!empty($this->baseuri)) {
-            $cspheader .= '; base-uri' . $this->baseuri;
+            if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 35 ||
+                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 40) {
+                $cspheader .= '; base-uri' . $this->baseuri;
+            }
         }
-        */
 
         // Experimental:
         if ($this->upgradeinsecurerequests) {
             if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 43 ||
+                $useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 42 ||
                 $useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >=30) {
                 $cspheader .= '; upgrade-insecure-requests';
             }
         }
 
         if (!empty($this->reporturi)) {
-            if ($useragentinfo['browser'] !== 'firefox' || $useragentinfo['version'] > 22) {
-                $cspheader .= '; report-uri ' . $this->reporturi;
-            }
+            $cspheader .= '; report-uri ' . $this->reporturi;
         }
 
         return $cspheader;
@@ -341,7 +342,7 @@ class CSPGenerator {
      */
     private function getBrowserInfo() {
         // Declare known browsers to look for
-        $browsers = array('firefox', 'msie', 'safari', 'webkit', 'chrome', 'opr', 'opera', 'netscape', 'konqueror');
+        $browsers = array('chrome', 'firefox', 'edge', 'msie', 'safari', 'opr', 'opera');
 
         // Clean up useragent and build regex that matches phrases for known browsers
         // (e.g. "Firefox/2.0" or "MSIE 6.0" (This only matches the major and minor
@@ -369,7 +370,12 @@ class CSPGenerator {
         // Since some UAs have more than one phrase (e.g Firefox has a Gecko phrase, Opera 7,8 have a MSIE phrase), 
         // use the last one found (the right-most one in the UA). That's usually the most correct.
         $i = count($matches['browser']) - 1;
-        return array('browser' => $matches['browser'][$i], 'version' => $matches['version'][$i]);
+        $secondlast = $i - 1;
+        if ($matches['version'][$i] === '537.36' && $matches['browser'][$i] === 'safari') {
+            return array('browser' => $matches['browser'][$secondlast], 'version' => $matches['version'][$secondlast]);
+        } else {
+            return array('browser' => $matches['browser'][$i], 'version' => $matches['version'][$i]);
+        }
     }
 
     /**
