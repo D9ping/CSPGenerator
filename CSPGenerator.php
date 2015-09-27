@@ -175,6 +175,7 @@ class CSPGenerator {
             $this->addConnectsrc('https://translate.googleapis.com');
             // unsafe-inline is needed for google translate to display the content:
             $this->addStylesrc("'unsafe-inline'");
+            // You can also comment out the above lines and add: <meta name="google" content="notranslate" />
         }
 
         if ($this->reportonly) {
