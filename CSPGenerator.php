@@ -371,7 +371,11 @@ class CSPGenerator {
         // Since some UAs have more than one phrase (e.g Firefox has a Gecko phrase, Opera 7,8 have a MSIE phrase), 
         // use the last one found (the right-most one in the UA). That's usually the most correct.
         $i = count($matches['browser']) - 1;
-        $secondlast = $i - 1;
+        $secondlast = 0;
+        if ($i >= 2) {
+            $secondlast = $i - 1;
+        }
+
         if ($matches['version'][$i] === '537.36' && $matches['browser'][$i] === 'safari') {
             return array('browser' => $matches['browser'][$secondlast], 'version' => $matches['version'][$secondlast]);
         } else {
