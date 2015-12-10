@@ -28,9 +28,9 @@ class CSPGenerator {
 
     private static $instance;
 
-    private $reportonly = FALSE;
+    private $reportonly = false;
 
-    private $upgradeinsecurerequests = FALSE;
+    private $upgradeinsecurerequests = false;
 
     private $defaultsrc = " 'none'";
 
@@ -105,7 +105,7 @@ class CSPGenerator {
      * Set report only mode.
      */
     public function setReportOnly() {
-        $this->reportonly = TRUE;
+        $this->reportonly = true;
     }
 
     /**
@@ -116,20 +116,20 @@ class CSPGenerator {
         $useragentinfo = $this->getBrowserInfo();
         //header('X-DebugDetectBrowser: ' . $useragentinfo['browser']);
         $cspheader = $this->getUseragentContentSecurityPolicy($useragentinfo);
-        header($cspheader, TRUE);
+        header($cspheader, true);
         // Add X-Frame-Options header based on the content security policy frame-ancestors directive.
         if (strpos($this->frameancestors, "'none'") >= 0 ||
             empty($this->frameancestors) && strpos($this->defaultsrc, "'none'") >= 0) {
-            header('X-Frame-Options: DENY', TRUE);
+            header('X-Frame-Options: DENY', true);
         } elseif (strpos($this->frameancestors, "'self'") >= 0 || empty($this->frameancestors)) {
-            header('X-Frame-Options: SAMEORIGIN', TRUE);
+            header('X-Frame-Options: SAMEORIGIN', true);
         } elseif (strpos($this->frameancestors, ' *') >= 0) {
-            header('X-Frame-Options: ALLOW', TRUE);
+            header('X-Frame-Options: ALLOW', true);
         } else {
             // ALLOW-FROM Not supported in Chrome or Safari or Opera and any Firefox less than version 18.0 and any Internet Explorer browser less than version 9.0. (source: http://erlend.oftedal.no/blog/tools/xframeoptions/)
             if (($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 18) || 
                 ($useragentinfo['browser'] === 'msie' && $useragentinfo['version'] >= 9)) {
-                header('X-Frame-Options: ALLOW-FROM ' . $this->frameancestors, TRUE);
+                header('X-Frame-Options: ALLOW-FROM ' . $this->frameancestors, true);
             }
         }
 
@@ -137,13 +137,13 @@ class CSPGenerator {
         switch ($this->reflectedxss) {
             case 'filter':
                 // filter is the prefered one, because mode=block can cause possible insecurity, source: http://homakov.blogspot.nl/2013/02/hacking-with-xss-auditor.html
-                header('X-XSS-Protection: 1', TRUE);
+                header('X-XSS-Protection: 1', true);
                 break;
             case 'allow':
-                header('X-XSS-Protection: 0', TRUE);
+                header('X-XSS-Protection: 0', true);
                 break;
             case 'block':
-                header('X-XSS-Protection: 1; mode=block', TRUE);
+                header('X-XSS-Protection: 1; mode=block', true);
                 break;
         }
     }
@@ -401,7 +401,7 @@ class CSPGenerator {
      * @param string $stylesrc The style-src policy directive to add. Where to allow CSS files from use 'unsafe-inline' for style attributes in (X)HTML document.
      */
     public function addStylesrc($stylesrc) {
-        if (strpos($this->stylesrc, $stylesrc) === FALSE) {
+        if (strpos($this->stylesrc, $stylesrc) === false) {
             $this->stylesrc .= ' ' . $stylesrc;
         }
     }
@@ -411,7 +411,7 @@ class CSPGenerator {
      * @param string $imagesrc The image-src policy directive to add. Where to allow images from. Use data: for base64 data url images.
      */
     public function addImagesrc($imagesrc) {
-        if (strpos($this->imagesrc, $imagesrc) === FALSE) {
+        if (strpos($this->imagesrc, $imagesrc) === false) {
             $this->imagesrc .= ' ' . $imagesrc;
         }
     }
@@ -423,7 +423,7 @@ class CSPGenerator {
      * @param string $scriptsrc The script-src policy directive to add. Use 'unsafe-inline' to allow unsafe loading of iniline scripts, use 'unsafe-eval' to allow text-to-JavaScript mechanisms like eval.
      */
     public function addScriptsrc($scriptsrc) {
-        if (strpos($this->scriptsrc, $scriptsrc) === FALSE) {
+        if (strpos($this->scriptsrc, $scriptsrc) === false) {
             $this->scriptsrc .= ' ' . $scriptsrc;
         }
     }
@@ -442,12 +442,12 @@ class CSPGenerator {
     /**
      * Set a new script nonce.
      * @param bool $enablenonce Is the use of a nonces enabled for allowing inline scripts. 
-     *                          Set to TRUE to add a random 'nonce-$random' to script-src directive
-     *                          and set to FALSE to remove 'nonce-$random' from the script-src directive.
+     *                          Set to true to add a random 'nonce-$random' to script-src directive
+     *                          and set to false to remove 'nonce-$random' from the script-src directive.
      * @param int  $noncelength The length of the new nonce. It's recommended to use (at least)128 bits nonces.
       *                         With the use of all ASCII printable characters you get about 6.570 bits entropy per character.
      */
-    public function setScriptsrcNonce($enablenonce = TRUE, $noncelength = 20) {
+    public function setScriptsrcNonce($enablenonce = true, $noncelength = 20) {
         if ($enablenonce) {
             $this->scriptsrcnonce = $this->generateNonce($noncelength);
         } else {
@@ -468,12 +468,12 @@ class CSPGenerator {
     /**
      * Set a new style nonce.
      * @param bool $enablenonce Is the use of a nonces enabled for allowing inline styles. 
-     *                          Set to TRUE to add a random 'nonce-$random' to style-src directive
-     *                          and set to FALSE to remove 'nonce-$random' from the style-src directive.
+     *                          Set to true to add a random 'nonce-$random' to style-src directive
+     *                          and set to false to remove 'nonce-$random' from the style-src directive.
      * @param int  $noncelength The length of the new nonce. It's recommended to use (at least)128 bits nonces.
      *                          With the use of all ASCII printable characters you get about 6.570 bits entropy per character.
      */
-    public function setStylesrcNonce($enablenonce = TRUE, $noncelength = 20) {
+    public function setStylesrcNonce($enablenonce = true, $noncelength = 20) {
         if ($enablenonce) {
             $this->stylesrcnonce = $this->generateNonce($noncelength);
         } else {
@@ -497,7 +497,7 @@ class CSPGenerator {
         }
 
         $sourcecode = str_replace("\r", '', $sourcecode); // remove \r to make it work.
-        $sourcehashbase64 = base64_encode(hash($hashalgo, $sourcecode, TRUE));
+        $sourcehashbase64 = base64_encode(hash($hashalgo, $sourcecode, true));
         return "'" . $hashalgo . "-" . $sourcehashbase64 . "'";
     }
 
@@ -547,7 +547,7 @@ class CSPGenerator {
      * @param string $connectsrc The connect-src policy directive to add. Where to allow XMLHttpRequest to connect to.
      */
     public function addConnectsrc($connectsrc) {
-        if (strpos($this->connectsrc, $connectsrc) === FALSE) {
+        if (strpos($this->connectsrc, $connectsrc) === false) {
             $this->connectsrc .= ' ' . $connectsrc;
         }
     }
@@ -557,7 +557,7 @@ class CSPGenerator {
      * @param string $mediasrc The media-src policy directive to add. Where to allow to load video/audio sources from. Use mediastream: for the MediaStream API. 
      */
     public function addMediasrc($mediasrc) {
-        if (strpos($this->mediasrc, $mediasrc) === FALSE) {
+        if (strpos($this->mediasrc, $mediasrc) === false) {
             $this->mediasrc .= ' ' . $mediasrc;
         }
     }
@@ -566,7 +566,7 @@ class CSPGenerator {
      * Add manifest-src Security Policy Level 2 directive. (Experimental Directive)
      */
     public function addManifestsrc($manifestsrc) {
-        if (strpos($this->manifestsrc, $manifestsrc) === FALSE) {
+        if (strpos($this->manifestsrc, $manifestsrc) === false) {
             $this->manifestsrc .= '' . $manifestsrc;
         }
     }
@@ -576,7 +576,7 @@ class CSPGenerator {
      * @param string $fontsrc The font-src policy directive to add. Where to allow to load font files from.
      */
     public function addFontsrc($fontsrc) {
-        if (strpos($this->fontsrc, $fontsrc) === FALSE) {
+        if (strpos($this->fontsrc, $fontsrc) === false) {
             $this->fontsrc .= ' ' . $fontsrc;
         }
     }
@@ -587,7 +587,7 @@ class CSPGenerator {
      * @param string $framesrc The frame-src policy directive to add. Where to allow to load frames/iframe from.
      */
     public function addFramesrc($framesrc) {
-        if (strpos($this->framesrc, $framesrc) === FALSE) {
+        if (strpos($this->framesrc, $framesrc) === false) {
             $this->framesrc .= ' ' . $framesrc;
         }
     }
@@ -598,7 +598,7 @@ class CSPGenerator {
      * @param string $childsrc The child-src policy directive to add. Where webworkers and frames/iframe are allowed to load from.
      */
     public function addChildsrc($childsrc) {
-        if (strpos($this->childsrc, $childsrc) === FALSE) {
+        if (strpos($this->childsrc, $childsrc) === false) {
             $this->childsrc .= ' ' . $childsrc;
         }
     }
@@ -620,7 +620,7 @@ class CSPGenerator {
             throw new Exception("Use *.");
         }
 
-        if (strpos($this->frameancestors, $frameancestors) === FALSE) {
+        if (strpos($this->frameancestors, $frameancestors) === false) {
             $this->frameancestors .= ' ' . $frameancestors;
         }
     }
@@ -630,7 +630,7 @@ class CSPGenerator {
      * @param string $objectsrc The object-src policy directive to add. Where to allow to load plugins objects like flash/java applets from.
      */
     public function addObjectsrc($objectsrc) {
-        if (strpos($this->objectsrc, $objectsrc) === FALSE) {
+        if (strpos($this->objectsrc, $objectsrc) === false) {
             $this->objectsrc .= ' ' . $objectsrc;
         }
     }
@@ -641,7 +641,7 @@ class CSPGenerator {
      *         (e.g. application/x-shockwave-flash, application/pdf) of plugins allowed to load.
      */
     public function addPlugintypes($plugintypes) {
-        if (strpos($this->plugintypes, $plugintypes) === FALSE) {
+        if (strpos($this->plugintypes, $plugintypes) === false) {
             $this->plugintypes .= ' ' . $plugintypes;
         }
     }
@@ -651,7 +651,7 @@ class CSPGenerator {
      * @param string $formaction The form-action policy directive to add. Restricts which URIs can be used as the action of HTML form elements.
      */
     public function addFormaction($formaction) {
-        if (strpos($this->formaction, $formaction) === FALSE) {
+        if (strpos($this->formaction, $formaction) === false) {
             $this->formaction .= ' ' . $formaction;
         }
     }
@@ -662,7 +662,7 @@ class CSPGenerator {
      * @param string $baseuri The base-uri policy directive to add. Defines the URIs that a user agent may use as the document base URL.
      */
     public function addBaseuri($baseuri) {
-        if (strpos($this->baseuri, $baseuri) === FALSE) {
+        if (strpos($this->baseuri, $baseuri) === false) {
             $this->baseuri .= ' ' . $baseuri;
         }
     }
@@ -679,7 +679,7 @@ class CSPGenerator {
             $sandboxoption === 'allow-same-origin' ||
             $sandboxoption === 'allow-scripts' ||
             $sandboxoption === 'allow-top-navigation') {
-            if (strpos($this->sandboxoptions, $sandboxoption) === FALSE) {
+            if (strpos($this->sandboxoptions, $sandboxoption) === false) {
                 $this->sandboxoptions .= ' ' . $sandboxoption;
             }
         } else {
@@ -741,7 +741,7 @@ class CSPGenerator {
      * Demo page: https://googlechrome.github.io/samples/csp-upgrade-insecure-requests/index.html
      * @param bool Should the upgrade-insecure-requests directive been added to the content security policy header.
      */
-    public function setUpgradeInsecureRequests($upgradeinsecurerequests = TRUE) {
+    public function setUpgradeInsecureRequests($upgradeinsecurerequests = true) {
         $this->upgradeinsecurerequests = $upgradeinsecurerequests;
     }
 }
