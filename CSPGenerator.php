@@ -1,6 +1,6 @@
 <?php 
 /*
-Copyright (c) 2014-2015, Tom
+Copyright (c) 2014-2016, Tom
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted 
@@ -95,6 +95,7 @@ class CSPGenerator {
 
     /**
      * Set the url to where to report violations of the Content Security Policy.
+     *
      * @param $string $reporturi The uri to report the Content Security Policy violation reports on.
      */
     public function setReporturi($reporturi) {
@@ -338,7 +339,8 @@ class CSPGenerator {
     }
 
     /**
-     * Get browser name and version from user-agent header.
+     * Get browser name and version from the user-agent header.
+     *
      * @return string[]
      */
     private function getBrowserInfo() {
@@ -384,7 +386,8 @@ class CSPGenerator {
     }
 
     /**
-     * Set the default-src content security policy directive. We don't allow empty default policy.
+     * Set the default-src content security policy directive. Don't allow an empty default policy.
+     *
      * @param string $defaultsrc The default-src policy directive. Style-src, image-src, script-src, frame-src, connect-src, font-src, objectsrc and media-src all inherit from this.
      */
     public function setDefaultsrc($defaultsrc) {
@@ -398,6 +401,7 @@ class CSPGenerator {
     /**
      * Add style-src Content Security Policy 1.0 directive.
      * In Content Security Policy Level 1.1 and Level 2, the use of 'none-$nonce' and 'sha256-$hash' is allowed for whitelisted inline style= use.
+     *
      * @param string $stylesrc The style-src policy directive to add. Where to allow CSS files from use 'unsafe-inline' for style attributes in (X)HTML document.
      */
     public function addStylesrc($stylesrc) {
@@ -408,6 +412,7 @@ class CSPGenerator {
 
     /**
      * Add image-src Content Security Policy 1.0 directive.
+     *
      * @param string $imagesrc The image-src policy directive to add. Where to allow images from. Use data: for base64 data url images.
      */
     public function addImagesrc($imagesrc) {
@@ -420,6 +425,7 @@ class CSPGenerator {
      * Add script-src Content Security Policy 1.0 directive.
      * In Content Security Policy 1.1 and Level 2, the use of 'none-$nonce' and 'sha256-$hash' is allowed for whitelisted inline scripts.
      * 'unsafe-inline' can be ignored by user-agent because it's so unsafe.
+     *
      * @param string $scriptsrc The script-src policy directive to add. Use 'unsafe-inline' to allow unsafe loading of iniline scripts, use 'unsafe-eval' to allow text-to-JavaScript mechanisms like eval.
      */
     public function addScriptsrc($scriptsrc) {
@@ -430,6 +436,7 @@ class CSPGenerator {
 
     /**
      * Add a new script-src hashcode for a script.
+     *
      * @param string $sourcecode The exact sourcecode of the script to allow inline to be included in the page. 
      *                           Don't forget linefeed(\n) and carriage return(\r) characters.
      * @param string $hashalgo   The hashing algorithm to use, can be "sha256"(default), "sha384" or "sha512".
@@ -441,6 +448,7 @@ class CSPGenerator {
 
     /**
      * Set a new script nonce.
+     *
      * @param bool $enablenonce Is the use of a nonces enabled for allowing inline scripts. 
      *                          Set to true to add a random 'nonce-$random' to script-src directive
      *                          and set to false to remove 'nonce-$random' from the script-src directive.
@@ -457,6 +465,7 @@ class CSPGenerator {
 
     /**
      * Add a new style-src hash code.
+     *
      * @param string $sourcecode The exact content of style tag.
      * @param string $hashalgo   The hashing algorithm to use, can be "sha256"(default), "sha384" or "sha512".
      *                           SHA(2)-384 and SHA(2)-512 are optimized for 64bits processors+software.
@@ -482,7 +491,8 @@ class CSPGenerator {
     }
 
     /**
-     * Generate a new hash code.
+     * Generate a new hash code for the $sourcecode value
+     *
      * @param string $sourcecode The content to generate the hash from. \r characters are removed.
      * @param string $hashalgo   The hashing algorithm to use, can be "sha256"(default), "sha384" or "sha512".
      * @return string A new hash code as base64 with $hashalgo- prefix and wrapped around single quotes.
@@ -502,7 +512,8 @@ class CSPGenerator {
     }
 
     /**
-     * Generate a new nonce.
+     * Generate a new nonce with certain length.
+     *
      * @param int $noncelength The length of the nonce to generate.
      * @return string A new nonce.
      */
@@ -520,6 +531,7 @@ class CSPGenerator {
 
     /**
      * Get the current script-src nonce.
+     *
      * @return string The nonce string.
      */
     public function getScriptsrcNonce() {
@@ -532,6 +544,7 @@ class CSPGenerator {
 
     /**
      * Get the current style-src nonce.
+     *
      * @return string The nonce string.
      */
     public function getStylesrcNonce() {
@@ -544,6 +557,7 @@ class CSPGenerator {
 
     /**
      * Add connect-src Content Security Policy Level 1 directive.
+     *
      * @param string $connectsrc The connect-src policy directive to add. Where to allow XMLHttpRequest to connect to.
      */
     public function addConnectsrc($connectsrc) {
@@ -554,6 +568,7 @@ class CSPGenerator {
 
     /**
      * Add media-src Content Security Policy Level 1 directive.
+     *
      * @param string $mediasrc The media-src policy directive to add. Where to allow to load video/audio sources from. Use mediastream: for the MediaStream API. 
      */
     public function addMediasrc($mediasrc) {
@@ -573,6 +588,7 @@ class CSPGenerator {
 
     /**
      * Add font-src Content Security Policy Level 1 directive.
+     *
      * @param string $fontsrc The font-src policy directive to add. Where to allow to load font files from.
      */
     public function addFontsrc($fontsrc) {
@@ -583,7 +599,8 @@ class CSPGenerator {
 
     /**
      * Add frame-src Content Security Policy Level 1 directive.
-     * note: frame-src is decreated in Content Security Policy Level 2 in favor of the child-src directive.
+     * frame-src is decreated in Content Security Policy Level 2 in favor of the child-src directive.
+     *
      * @param string $framesrc The frame-src policy directive to add. Where to allow to load frames/iframe from.
      */
     public function addFramesrc($framesrc) {
@@ -594,7 +611,8 @@ class CSPGenerator {
 
     /**
      * Add the child-src Content Security Policy Level 2 directive. (Experimental Directive)
-     * note: This directive also applies to the decreated frame-src directive.
+     * This directive also applies to the decreated frame-src directive.
+     *
      * @param string $childsrc The child-src policy directive to add. Where webworkers and frames/iframe are allowed to load from.
      */
     public function addChildsrc($childsrc) {
@@ -606,6 +624,7 @@ class CSPGenerator {
     /**
      * Add the frame-ancestors Content Security Policy Level 2 directive. (Experimental Directive)
      * This directive does the same as the X-Frame-Options header.
+     *
      * @param string $frameancestors The frame-ancestors policy directive to add.
      *                               'self' is the same as X-Frame-Options: SAMEORIGIN,
      *                               'none' is the same as X-Frame-Options: DENY,
@@ -627,6 +646,7 @@ class CSPGenerator {
 
     /**
      * Add object-src Content Security Policy 1.0 directive.
+     *
      * @param string $objectsrc The object-src policy directive to add. Where to allow to load plugins objects like flash/java applets from.
      */
     public function addObjectsrc($objectsrc) {
@@ -637,6 +657,7 @@ class CSPGenerator {
 
     /**
      * Add plugin-types Content Security Policy Level 2 directive. (Experimental Directive)
+     *
      * @param string $plugintypes The plugin-types policy directive to add. A list of MIME types
      *         (e.g. application/x-shockwave-flash, application/pdf) of plugins allowed to load.
      */
@@ -648,6 +669,7 @@ class CSPGenerator {
 
     /**
      * Add form-action Content Security Policy Level 2 directive. (Experimental Directive)
+     *
      * @param string $formaction The form-action policy directive to add. Restricts which URIs can be used as the action of HTML form elements.
      */
     public function addFormaction($formaction) {
@@ -658,7 +680,8 @@ class CSPGenerator {
 
     /**
      * Add base-uri Content Security Policy 1.1 directive. (Experimental Directive)
-     * note: this directive is by default not restricted by default-src directive.
+     * This directive is by default not restricted by the default-src directive.
+     *
      * @param string $baseuri The base-uri policy directive to add. Defines the URIs that a user agent may use as the document base URL.
      */
     public function addBaseuri($baseuri) {
@@ -669,6 +692,7 @@ class CSPGenerator {
 
     /**
      * Add sandbox options to the sandbox Content Security Policy 1.0 directive.
+     *
      * @param string $sandboxoption The sandbox policy directive to add. This can be: allow-forms, allow-pointer-lock, allow-popups, allow-same-origin, allow-scripts or allow-top-navigation.
      */
     public function addSandboxoption($sandboxoption) {
@@ -688,7 +712,8 @@ class CSPGenerator {
     }
 
     /**
-     * Set the referrer policy, this will change the behavoir how the user-agent sends the referrer(HTTP field: referer (misspelled missing r)) header for your origin.
+     * Set the referrer policy, this will change the behavoir how the user-agent sends the referrer(HTTP field: referer) header for your origin.
+     *
      * @param string $referrerpolicy The referrer policy can be one of these values:
      *                               "no-referrer"(obsolete policy name: "never"), do not send any http referrer header at all. Most privacy friendly, but not good choice as weak protection if implemented against CSRF.
      *                               "no-referrer-when-downgrade"(obsolete policy name: "default"), default bevavior when no policy. Will send the full referrer but do not send referrer header when coming from https to protect you from dislosing your session url.
@@ -720,6 +745,7 @@ class CSPGenerator {
 
     /**
      * Set reflected-xss content security policy 1.1>= policy setting. (Experimental directive)
+     *
      * @param string $reflectedxss The reflected-xss policy. This can be:
      *                             "allow" no url filtering, does the same as X-XSS-Protection: 0;
      *                             "filter" filter detected unsafe url and display warning bar(with unsafe reload option) does the same as X-XSS-Protection: 1;
@@ -739,6 +765,7 @@ class CSPGenerator {
      * This directive makes the user-agent rewrite all resources starting with http:// request httpS:// resources on the page.
      * Specifications: http://www.w3.org/TR/upgrade-insecure-requests/
      * Demo page: https://googlechrome.github.io/samples/csp-upgrade-insecure-requests/index.html
+     *
      * @param bool Should the upgrade-insecure-requests directive been added to the content security policy header.
      */
     public function setUpgradeInsecureRequests($upgradeinsecurerequests = true) {
