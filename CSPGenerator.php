@@ -873,7 +873,9 @@ class CSPGenerator {
      */
     private function isValidDirectiveValue($directivevalue)
     {
-        if (strpos($directivevalue, ';') !== false) {
+        if (strpos($directivevalue, ';') !== false ||
+            strpos($directivevalue, "\n") !== false ||
+            strpos($directivevalue, "\r") !== false) {
             return false;
         }
 
