@@ -79,13 +79,15 @@ class CSPGenerator {
     /**
      * Create a new instance of CSPGenerator class.
      */
-    public function __construct() {
+    private function __construct()
+    {
     }
 
     /**
      * Get instance of CSPGenerator class.
      */
-    public static function getInstance() {
+    public static function getInstance()
+    {
         if (empty(self::$instance)) {
             self::$instance = new CSPGenerator();
         }
@@ -98,14 +100,20 @@ class CSPGenerator {
      *
      * @param $string $reporturi The uri to report the Content Security Policy violation reports on.
      */
-    public function setReporturi($reporturi) {
+    public function setReporturi($reporturi)
+    {
+        if (!$this->isValidDirectiveValue($reporturi)) {
+            throw new Exception('reporturi invalid.');
+        }
+
         $this->reporturi = $reporturi;
     }
 
     /**
      * Set report only mode.
      */
-    public function setReportOnly() {
+    public function setReportOnly()
+    {
         $this->reportonly = true;
     }
 
@@ -113,7 +121,8 @@ class CSPGenerator {
      * Parse user-agent header and set proper Content Security Policy header,
      * X-Frame-Options header and X-XSS-Protection header based on the browser and browser version.
      */
-    public function Parse() {
+    public function Parse()
+    {
         $useragentinfo = $this->getBrowserInfo();
         //header('X-DebugDetectBrowser: ' . $useragentinfo['browser']);
         $cspheader = $this->getUseragentContentSecurityPolicy($useragentinfo);
@@ -155,7 +164,8 @@ class CSPGenerator {
      * Because several directives cannot work in META tag it's recommended to use
      * HTTP header instead if possible.
      */
-    public function getMetatagContentSecurityPolicy() {
+    public function getMetatagContentSecurityPolicy()
+    {
         $cspheader = $this->getUseragentContentSecurityPolicy($this->getBrowserInfo());
         $csp = explode(': ', $cspheader, 2);
         $cspmetatag = '<meta http-equiv="';
@@ -169,7 +179,8 @@ class CSPGenerator {
     /**
      * Get the Content Security Policy that is supported/compatible with the current user-agent.
      */
-    private function getUseragentContentSecurityPolicy($useragentinfo) {
+    private function getUseragentContentSecurityPolicy($useragentinfo)
+    {
         $cspheader = 'Content-Security-Policy: ';
         if ($useragentinfo['browser'] === 'chrome') {
             // Whitelist google translate, because it's commonly enabled and used:
@@ -343,7 +354,8 @@ class CSPGenerator {
      *
      * @return string[]
      */
-    private function getBrowserInfo() {
+    private function getBrowserInfo()
+    {
         // Declare known browsers to look for
         $browsers = array('chrome', 'firefox', 'edge', 'msie', 'safari', 'opr', 'opera');
 
@@ -390,7 +402,12 @@ class CSPGenerator {
      *
      * @param string $defaultsrc The default-src policy directive. Style-src, image-src, script-src, frame-src, connect-src, font-src, objectsrc and media-src all inherit from this.
      */
-    public function setDefaultsrc($defaultsrc) {
+    public function setDefaultsrc($defaultsrc)
+    {
+        if (!$this->isValidDirectiveValue($defaultsrc)) {
+            throw new Exception('defaultsrc value invalid');
+        }
+
         if (empty($defaultsrc)) {
             throw new Exception('CSP default-src policy directive cannot be empty.');
         }
@@ -404,7 +421,12 @@ class CSPGenerator {
      *
      * @param string $stylesrc The style-src policy directive to add. Where to allow CSS files from use 'unsafe-inline' for style attributes in (X)HTML document.
      */
-    public function addStylesrc($stylesrc) {
+    public function addStylesrc($stylesrc)
+    {
+        if (!$this->isValidDirectiveValue($stylesrc)) {
+            throw new Exception('stylesrc value invalid');
+        }
+
         if (strpos($this->stylesrc, $stylesrc) === false) {
             $this->stylesrc .= ' ' . $stylesrc;
         }
@@ -415,7 +437,12 @@ class CSPGenerator {
      *
      * @param string $imagesrc The image-src policy directive to add. Where to allow images from. Use data: for base64 data url images.
      */
-    public function addImagesrc($imagesrc) {
+    public function addImagesrc($imagesrc)
+    {
+        if (!$this->isValidDirectiveValue($imagesrc)) {
+            throw new Exception('imagesrc value invalid');
+        }
+
         if (strpos($this->imagesrc, $imagesrc) === false) {
             $this->imagesrc .= ' ' . $imagesrc;
         }
@@ -428,7 +455,12 @@ class CSPGenerator {
      *
      * @param string $scriptsrc The script-src policy directive to add. Use 'unsafe-inline' to allow unsafe loading of iniline scripts, use 'unsafe-eval' to allow text-to-JavaScript mechanisms like eval.
      */
-    public function addScriptsrc($scriptsrc) {
+    public function addScriptsrc($scriptsrc)
+    {
+        if (!$this->isValidDirectiveValue($scriptsrc)) {
+            throw new Exception('scriptsrc value invalid');
+        }
+
         if (strpos($this->scriptsrc, $scriptsrc) === false) {
             $this->scriptsrc .= ' ' . $scriptsrc;
         }
@@ -442,7 +474,8 @@ class CSPGenerator {
      * @param string $hashalgo   The hashing algorithm to use, can be "sha256"(default), "sha384" or "sha512".
      *                           SHA(2)-384 and SHA(2)-512 are optimized for 64bits processors+software.
      */
-    public function addScriptsrcHash($sourcecode, $hashalgo = 'sha256') {
+    public function addScriptsrcHash($sourcecode, $hashalgo = 'sha256')
+    {
         $this->addScriptsrc($this->generateSourceHash($sourcecode, $hashalgo));
     }
 
@@ -455,7 +488,8 @@ class CSPGenerator {
      * @param int  $noncelength The length of the new nonce. It's recommended to use (at least)128 bits nonces.
       *                         With the use of all ASCII printable characters you get about 6.570 bits entropy per character.
      */
-    public function setScriptsrcNonce($enablenonce = true, $noncelength = 20) {
+    public function setScriptsrcNonce($enablenonce = true, $noncelength = 20)
+    {
         if ($enablenonce) {
             $this->scriptsrcnonce = $this->generateNonce($noncelength);
         } else {
@@ -470,7 +504,8 @@ class CSPGenerator {
      * @param string $hashalgo   The hashing algorithm to use, can be "sha256"(default), "sha384" or "sha512".
      *                           SHA(2)-384 and SHA(2)-512 are optimized for 64bits processors+software.
      */
-    public function addStylesrcHash($sourcecode, $hashalgo = 'sha256') {
+    public function addStylesrcHash($sourcecode, $hashalgo = 'sha256')
+    {
         $this->addStylesrc($this->generateSourceHash($sourcecode, $hashalgo));
     }
 
@@ -497,7 +532,8 @@ class CSPGenerator {
      * @param string $hashalgo   The hashing algorithm to use, can be "sha256"(default), "sha384" or "sha512".
      * @return string A new hash code as base64 with $hashalgo- prefix and wrapped around single quotes.
      */
-    private function generateSourceHash($sourcecode, $hashalgo) {
+    private function generateSourceHash($sourcecode, $hashalgo)
+    {
         if (!isset($sourcecode)) {
             throw new Exception('Sourcecode is missing.');
         }
@@ -517,7 +553,8 @@ class CSPGenerator {
      * @param int $noncelength The length of the nonce to generate.
      * @return string A new nonce.
      */
-    private function generateNonce($noncelength) {
+    private function generateNonce($noncelength)
+    {
         if ($noncelength < self::NONCEMINLENGTH) {
             throw new Exception(sprintf('The nonce length needs to be at least %1$d characters.', self::NONCEMINLENGTH));
         }
@@ -534,7 +571,8 @@ class CSPGenerator {
      *
      * @return string The nonce string.
      */
-    public function getScriptsrcNonce() {
+    public function getScriptsrcNonce()
+    {
         if (empty($this->scriptsrcnonce)) {
             throw new Exception('No script-src nonce used.');
         }
@@ -560,7 +598,12 @@ class CSPGenerator {
      *
      * @param string $connectsrc The connect-src policy directive to add. Where to allow XMLHttpRequest to connect to.
      */
-    public function addConnectsrc($connectsrc) {
+    public function addConnectsrc($connectsrc)
+    {
+        if (!$this->isValidDirectiveValue($connectsrc)) {
+            throw new Exception('connectsrc value invalid');
+        }
+
         if (strpos($this->connectsrc, $connectsrc) === false) {
             $this->connectsrc .= ' ' . $connectsrc;
         }
@@ -571,7 +614,12 @@ class CSPGenerator {
      *
      * @param string $mediasrc The media-src policy directive to add. Where to allow to load video/audio sources from. Use mediastream: for the MediaStream API. 
      */
-    public function addMediasrc($mediasrc) {
+    public function addMediasrc($mediasrc)
+    {
+        if (!$this->isValidDirectiveValue($mediasrc)) {
+            throw new Exception('mediasrc value invalid');
+        }
+
         if (strpos($this->mediasrc, $mediasrc) === false) {
             $this->mediasrc .= ' ' . $mediasrc;
         }
@@ -580,7 +628,12 @@ class CSPGenerator {
     /**
      * Add manifest-src Security Policy Level 2 directive. (Experimental Directive)
      */
-    public function addManifestsrc($manifestsrc) {
+    public function addManifestsrc($manifestsrc)
+    {
+        if (!$this->isValidDirectiveValue($manifestsrc)) {
+            throw new Exception('manifestsrc value invalid');
+        }
+
         if (strpos($this->manifestsrc, $manifestsrc) === false) {
             $this->manifestsrc .= '' . $manifestsrc;
         }
@@ -591,7 +644,12 @@ class CSPGenerator {
      *
      * @param string $fontsrc The font-src policy directive to add. Where to allow to load font files from.
      */
-    public function addFontsrc($fontsrc) {
+    public function addFontsrc($fontsrc)
+    {
+        if (!$this->isValidDirectiveValue($fontsrc)) {
+            throw new Exception('fontsrc value invalid');
+        }
+
         if (strpos($this->fontsrc, $fontsrc) === false) {
             $this->fontsrc .= ' ' . $fontsrc;
         }
@@ -603,7 +661,12 @@ class CSPGenerator {
      *
      * @param string $framesrc The frame-src policy directive to add. Where to allow to load frames/iframe from.
      */
-    public function addFramesrc($framesrc) {
+    public function addFramesrc($framesrc)
+    {
+        if (!$this->isValidDirectiveValue($framesrc)) {
+            throw new Exception('framesrc value invalid');
+        }
+
         if (strpos($this->framesrc, $framesrc) === false) {
             $this->framesrc .= ' ' . $framesrc;
         }
@@ -615,7 +678,12 @@ class CSPGenerator {
      *
      * @param string $childsrc The child-src policy directive to add. Where webworkers and frames/iframe are allowed to load from.
      */
-    public function addChildsrc($childsrc) {
+    public function addChildsrc($childsrc)
+    {
+        if (!$this->isValidDirectiveValue($childsrc)) {
+            throw new Exception('childsrc value invalid');
+        }
+
         if (strpos($this->childsrc, $childsrc) === false) {
             $this->childsrc .= ' ' . $childsrc;
         }
@@ -630,7 +698,12 @@ class CSPGenerator {
      *                               'none' is the same as X-Frame-Options: DENY,
      *                                   *  is the same as X-Frame-Options: ALLOW
      */
-    public function addFrameancestors($frameancestors) {
+    public function addFrameancestors($frameancestors)
+    {
+        if (!$this->isValidDirectiveValue($frameancestors)) {
+            throw new Exception('frameancestors value invalid');
+        }
+
         if ($frameancestors === 'DENY') {
             throw new Exception("Use 'none'.");
         } elseif ($frameancestors === 'SAMEORIGIN') {
@@ -649,7 +722,12 @@ class CSPGenerator {
      *
      * @param string $objectsrc The object-src policy directive to add. Where to allow to load plugins objects like flash/java applets from.
      */
-    public function addObjectsrc($objectsrc) {
+    public function addObjectsrc($objectsrc)
+    {
+        if (!$this->isValidDirectiveValue($objectsrc)) {
+            throw new Exception('objectsrc value invalid');
+        }
+
         if (strpos($this->objectsrc, $objectsrc) === false) {
             $this->objectsrc .= ' ' . $objectsrc;
         }
@@ -661,7 +739,12 @@ class CSPGenerator {
      * @param string $plugintypes The plugin-types policy directive to add. A list of MIME types
      *         (e.g. application/x-shockwave-flash, application/pdf) of plugins allowed to load.
      */
-    public function addPlugintypes($plugintypes) {
+    public function addPlugintypes($plugintypes)
+    {
+        if (!$this->isValidDirectiveValue($plugintypes)) {
+            throw new Exception('plugintypes value invalid');
+        }
+
         if (strpos($this->plugintypes, $plugintypes) === false) {
             $this->plugintypes .= ' ' . $plugintypes;
         }
@@ -672,7 +755,12 @@ class CSPGenerator {
      *
      * @param string $formaction The form-action policy directive to add. Restricts which URIs can be used as the action of HTML form elements.
      */
-    public function addFormaction($formaction) {
+    public function addFormaction($formaction)
+    {
+        if (!$this->isValidDirectiveValue($formaction)) {
+            throw new Exception('formaction value invalid');
+        }
+
         if (strpos($this->formaction, $formaction) === false) {
             $this->formaction .= ' ' . $formaction;
         }
@@ -684,7 +772,8 @@ class CSPGenerator {
      *
      * @param string $baseuri The base-uri policy directive to add. Defines the URIs that a user agent may use as the document base URL.
      */
-    public function addBaseuri($baseuri) {
+    public function addBaseuri($baseuri)
+    {
         if (strpos($this->baseuri, $baseuri) === false) {
             $this->baseuri .= ' ' . $baseuri;
         }
@@ -695,7 +784,8 @@ class CSPGenerator {
      *
      * @param string $sandboxoption The sandbox policy directive to add. This can be: allow-forms, allow-pointer-lock, allow-popups, allow-same-origin, allow-scripts or allow-top-navigation.
      */
-    public function addSandboxoption($sandboxoption) {
+    public function addSandboxoption($sandboxoption)
+    {
         $sandboxoption = strtolower($sandboxoption);
         if ($sandboxoption === 'allow-forms' ||
             $sandboxoption === 'allow-pointer-lock' ||
@@ -720,7 +810,8 @@ class CSPGenerator {
      *                               "origin" only send the domain(e.g. www.example.tld) and not the query string path.(e.g. /page2.htm). A bit more privacy friendly than the full referrer.
      *                               "unsafe-url"(obsolete policy name: "always"). Will always send the full referrer. This will also send the full referrer on HTTP when coming from a HTTPS site and that can be a security(session urls) and privacy issue.
      */
-    public function setReferrerPolicy($referrerpolicy) {
+    public function setReferrerPolicy($referrerpolicy)
+    {
         switch (strtolower($referrerpolicy)) {
             case 'default':
             case 'no-referrer-when-downgrade':
@@ -751,7 +842,8 @@ class CSPGenerator {
      *                             "filter" filter detected unsafe url and display warning bar(with unsafe reload option) does the same as X-XSS-Protection: 1;
      *                             "block" block with about:blank. Does the same as  X-XSS-Protection: 1; mode=block;
      */
-    public function setReflectedxss($reflectedxss) {
+    public function setReflectedxss($reflectedxss)
+    {
         $reflectedxss = strtolower($reflectedxss);
         if ($reflectedxss === 'filter' || $reflectedxss === 'block' || $reflectedxss === 'allow') {
             $this->reflectedxss = $reflectedxss;
@@ -768,7 +860,23 @@ class CSPGenerator {
      *
      * @param bool Should the upgrade-insecure-requests directive been added to the content security policy header.
      */
-    public function setUpgradeInsecureRequests($upgradeinsecurerequests = true) {
+    public function setUpgradeInsecureRequests($upgradeinsecurerequests = true)
+    {
         $this->upgradeinsecurerequests = $upgradeinsecurerequests;
+    }
+
+    /**
+     * Check if directive value is valid as value.
+     *
+     * @param string $directivevalue The directive value to check.
+     * @return bool
+     */
+    private function isValidDirectiveValue($directivevalue)
+    {
+        if (strpos($directivevalue, ';') !== false) {
+            return false;
+        }
+
+        return true;
     }
 }
