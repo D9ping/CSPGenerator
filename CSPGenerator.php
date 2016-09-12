@@ -103,7 +103,7 @@ class CSPGenerator {
     public function setReporturi($reporturi)
     {
         if (!$this->isValidDirectiveValue($reporturi)) {
-            throw new Exception('reporturi invalid.');
+            throw new InvalidArgumentException('reporturi invalid.');
         }
 
         $this->reporturi = $reporturi;
@@ -124,7 +124,7 @@ class CSPGenerator {
     public function Parse()
     {
         $useragentinfo = $this->getBrowserInfo();
-        //header('X-DebugDetectBrowser: ' . $useragentinfo['browser']);
+        //header('X-DebugDetectBrowser: '.$useragentinfo['browser']);
         $cspheader = $this->getUseragentContentSecurityPolicy($useragentinfo);
         header($cspheader, true);
         // Add X-Frame-Options header based on the content security policy frame-ancestors directive.
@@ -139,7 +139,7 @@ class CSPGenerator {
             // ALLOW-FROM Not supported in Chrome or Safari or Opera and any Firefox less than version 18.0 and any Internet Explorer browser less than version 9.0. (source: http://erlend.oftedal.no/blog/tools/xframeoptions/)
             if (($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 18) || 
                 ($useragentinfo['browser'] === 'msie' && $useragentinfo['version'] >= 9)) {
-                header('X-Frame-Options: ALLOW-FROM ' . $this->frameancestors, true);
+                header('X-Frame-Options: ALLOW-FROM '.$this->frameancestors, true);
             }
         }
 
@@ -172,7 +172,7 @@ class CSPGenerator {
         $cspmetatag .= $csp[0];
         $cspmetatag .= '" content="';
         $cspmetatag .= $csp[1];
-        $cspmetatag .= '" />' . "\r\n";
+        $cspmetatag .= '" />'."\r\n";
         return $cspmetatag;
     }
 
@@ -202,7 +202,7 @@ class CSPGenerator {
             }
 
             // X-Content-Security-Policy: uses allow instead of default-src.
-            $cspheader .= 'allow ' . $this->defaultsrc;
+            $cspheader .= 'allow '.$this->defaultsrc;
         } elseif ( ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] <= 24 && $useragentinfo['version'] >= 14) || 
                    ($useragentinfo['browser'] === 'safari' && $useragentinfo['version'] >= 6 && $useragentinfo['version'] < 7) ) {
             // Safari 5.0/5.1 X-WebKit-CSP implementation is badly broken it blocks permited\whitelisted things so it's not usable at all.
@@ -212,27 +212,27 @@ class CSPGenerator {
                 $cspheader = 'X-WebKit-CSP: ';
             }
 
-            $cspheader .= 'default-src' . $this->defaultsrc;
+            $cspheader .= 'default-src'.$this->defaultsrc;
         } else {
-            $cspheader .= 'default-src' . $this->defaultsrc;
+            $cspheader .= 'default-src'.$this->defaultsrc;
         }
 
         if (!empty($this->stylesrc)) {
             // The obsolete decreated X-Content-Security-Policy header does not support style-src. This is not implemented.
-            $cspheader .= '; style-src' . $this->stylesrc;
+            $cspheader .= '; style-src'.$this->stylesrc;
             if (!empty($this->stylesrcnonce)) {
-                $cspheader .= " 'nonce-" . $this->stylesrcnonce . "'";
+                $cspheader .= " 'nonce-".$this->stylesrcnonce."'";
             }
         }
 
         if (!empty($this->imagesrc)) {
-            $cspheader .= '; img-src' . $this->imagesrc;
+            $cspheader .= '; img-src'.$this->imagesrc;
         }
 
         if (!empty($this->scriptsrc)) {
-            $cspheader .= '; script-src' . $this->scriptsrc;
+            $cspheader .= '; script-src'.$this->scriptsrc;
             if (!empty($this->scriptsrcnonce)) {
-                $cspheader .= " 'nonce-" . $this->scriptsrcnonce . "'";
+                $cspheader .= " 'nonce-".$this->scriptsrcnonce."'";
             }
 
             // for inline script with the X-Content-Security-Policy header use 'options inline-script'.
@@ -251,57 +251,55 @@ class CSPGenerator {
         if (!empty($this->connectsrc)) {
             // The decreated X-Content-Security-Policy header uses xhr-src instead of connect-src.
             if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] <= 22 && $useragentinfo['version'] >= 3.7) {
-                $cspheader .= '; xhr-src' . $this->connectsrc;
+                $cspheader .= '; xhr-src'.$this->connectsrc;
             } else {
-                $cspheader .= '; connect-src' . $this->connectsrc;
+                $cspheader .= '; connect-src'.$this->connectsrc;
             }
         }
 
         if (!empty($this->mediasrc)) {
-            $cspheader .= '; media-src' . $this->mediasrc;
+            $cspheader .= '; media-src'.$this->mediasrc;
         }
 
         if (!empty($this->fontsrc)) {
-            $cspheader .= '; font-src' . $this->fontsrc;
+            $cspheader .= '; font-src'.$this->fontsrc;
         }
 
         if (!empty($this->childsrc)) {
             // Experimental, CSP Level 2:
-            $cspheader .= '; child-src' . $this->childsrc;
+            $cspheader .= '; child-src'.$this->childsrc;
         } elseif (!empty($this->framesrc)) {
             // CSP 1.0
-            $cspheader .= '; frame-src' . $this->framesrc;
+            $cspheader .= '; frame-src'.$this->framesrc;
         }
 
         if (!empty($this->frameancestors)) {
             // CSP 1.1
-            $cspheader .= '; frame-ancestors' . $this->frameancestors;
+            $cspheader .= '; frame-ancestors'.$this->frameancestors;
         }
 
         if (!empty($this->objectsrc)) {
-            $cspheader .= '; object-src' . $this->objectsrc;
+            $cspheader .= '; object-src'.$this->objectsrc;
         }
 
         // Experimental:
         // /*
         if (!empty($this->plugintypes)) {
             if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 27) {
-                $cspheader .= '; plugin-types' . $this->plugintypes;
+                $cspheader .= '; plugin-types'.$this->plugintypes;
             }
         }
         // */
 
-        // Experimental:
-        /*
+        // Experimental, use in chrome:
         if (!empty($this->manifestsrc)) {
-            $cspheader .= '; manifest-src' . $this->manifestsrc;
+            $cspheader .= '; manifest-src'.$this->manifestsrc;
         }
-        */
 
         // Experimental:
         /*
         if (!empty($this->referrerpolicy)) {
-            $cspheader .= '; referrer ' . $this->referrerpolicy;
+            $cspheader .= '; referrer '.$this->referrerpolicy;
         }
         */
 
@@ -311,7 +309,7 @@ class CSPGenerator {
             if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 36 ||
                 $useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 27 ||
                 $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 41) {
-                $cspheader .= '; form-action' . $this->formaction;
+                $cspheader .= '; form-action'.$this->formaction;
            }
         }
         // */
@@ -320,7 +318,7 @@ class CSPGenerator {
         /*
         if (!empty($this->reflectedxss)) {
            if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 27) {
-                $cspheader .= '; reflected-xss ' . $this->reflectedxss;
+                $cspheader .= '; reflected-xss '.$this->reflectedxss;
            }
         }
         */
@@ -329,7 +327,7 @@ class CSPGenerator {
         if (!empty($this->baseuri)) {
             if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 35 ||
                 $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 40) {
-                $cspheader .= '; base-uri' . $this->baseuri;
+                $cspheader .= '; base-uri'.$this->baseuri;
             }
         }
 
@@ -343,7 +341,7 @@ class CSPGenerator {
         }
 
         if (!empty($this->reporturi)) {
-            $cspheader .= '; report-uri ' . $this->reporturi;
+            $cspheader .= '; report-uri '.$this->reporturi;
         }
 
         return $cspheader;
@@ -367,7 +365,7 @@ class CSPGenerator {
         }
 
         $useragent = strtolower($_SERVER['HTTP_USER_AGENT']);
-        $pattern = '#(?<browser>' . join('|', $browsers) .')[/ ]+(?<version>[0-9]+(?:\.[0-9]+)?)#';
+        $pattern = '#(?<browser>'.join('|', $browsers) .')[/ ]+(?<version>[0-9]+(?:\.[0-9]+)?)#';
         // Find all phrases (or return empty array if none found)
         if (!preg_match_all($pattern, $useragent, $matches)) {
             if (strpos($useragent, 'Trident/') >= 0) {
@@ -405,11 +403,11 @@ class CSPGenerator {
     public function setDefaultsrc($defaultsrc)
     {
         if (!$this->isValidDirectiveValue($defaultsrc)) {
-            throw new Exception('defaultsrc value invalid');
+            throw new InvalidArgumentException('defaultsrc value invalid');
         }
 
         if (empty($defaultsrc)) {
-            throw new Exception('CSP default-src policy directive cannot be empty.');
+            throw new InvalidArgumentException('CSP default-src policy directive cannot be empty.');
         }
 
         $this->defaultsrc = $defaultsrc;
@@ -424,11 +422,11 @@ class CSPGenerator {
     public function addStylesrc($stylesrc)
     {
         if (!$this->isValidDirectiveValue($stylesrc)) {
-            throw new Exception('stylesrc value invalid');
+            throw new InvalidArgumentException('stylesrc value invalid');
         }
 
         if (strpos($this->stylesrc, $stylesrc) === false) {
-            $this->stylesrc .= ' ' . $stylesrc;
+            $this->stylesrc .= ' '.$stylesrc;
         }
     }
 
@@ -440,11 +438,11 @@ class CSPGenerator {
     public function addImagesrc($imagesrc)
     {
         if (!$this->isValidDirectiveValue($imagesrc)) {
-            throw new Exception('imagesrc value invalid');
+            throw new InvalidArgumentException('imagesrc value invalid');
         }
 
         if (strpos($this->imagesrc, $imagesrc) === false) {
-            $this->imagesrc .= ' ' . $imagesrc;
+            $this->imagesrc .= ' '.$imagesrc;
         }
     }
 
@@ -458,11 +456,11 @@ class CSPGenerator {
     public function addScriptsrc($scriptsrc)
     {
         if (!$this->isValidDirectiveValue($scriptsrc)) {
-            throw new Exception('scriptsrc value invalid');
+            throw new InvalidArgumentException('scriptsrc value invalid');
         }
 
         if (strpos($this->scriptsrc, $scriptsrc) === false) {
-            $this->scriptsrc .= ' ' . $scriptsrc;
+            $this->scriptsrc .= ' '.$scriptsrc;
         }
     }
 
@@ -517,7 +515,8 @@ class CSPGenerator {
      * @param int  $noncelength The length of the new nonce. It's recommended to use (at least)128 bits nonces.
      *                          With the use of all ASCII printable characters you get about 6.570 bits entropy per character.
      */
-    public function setStylesrcNonce($enablenonce = true, $noncelength = 20) {
+    public function setStylesrcNonce($enablenonce = true, $noncelength = 20)
+    {
         if ($enablenonce) {
             $this->stylesrcnonce = $this->generateNonce($noncelength);
         } else {
@@ -535,16 +534,16 @@ class CSPGenerator {
     private function generateSourceHash($sourcecode, $hashalgo)
     {
         if (!isset($sourcecode)) {
-            throw new Exception('Sourcecode is missing.');
+            throw new InvalidArgumentException('Sourcecode is missing.');
         }
 
         if ($hashalgo !== 'sha256' && $hashalgo !== 'sha384' && $hashalgo !== 'sha512') {
-            throw new Exception(sprintf('Hashing algorithm %1$s not supported.', $hashalgo));
+            throw new InvalidArgumentException(sprintf('Hashing algorithm %1$s not supported.', $hashalgo));
         }
 
         $sourcecode = str_replace("\r", '', $sourcecode); // remove \r to make it work.
         $sourcehashbase64 = base64_encode(hash($hashalgo, $sourcecode, true));
-        return "'" . $hashalgo . "-" . $sourcehashbase64 . "'";
+        return "'".$hashalgo."-".$sourcehashbase64."'";
     }
 
     /**
@@ -556,14 +555,18 @@ class CSPGenerator {
     private function generateNonce($noncelength)
     {
         if ($noncelength < self::NONCEMINLENGTH) {
-            throw new Exception(sprintf('The nonce length needs to be at least %1$d characters.', self::NONCEMINLENGTH));
+            throw new InvalidArgumentException(sprintf('The nonce length needs to be at least %1$d characters.', self::NONCEMINLENGTH));
         }
 
-        if (!function_exists('openssl_random_pseudo_bytes')) {
+        if (function_exists('random_bytes')) { // random_bytes is added in PHP 7.0. An userland implementation could be available for lower php versions.
+            return substr(base64_encode(random_bytes($noncelength)), 0, $noncelength);
+        } elseif (function_exists('mcrypt_create_iv')) {
+            return substr(base64_encode(mcrypt_create_iv($noncelength, MCRYPT_DEV_URANDOM)), 0, $noncelength);
+        } elseif (function_exists('openssl_random_pseudo_bytes')) {
+            return substr(base64_encode(openssl_random_pseudo_bytes($noncelength)), 0, $noncelength);
+        } else {
             throw new Exception('No secure pseudo random generator available for generating nonce.');
         }
-
-        return substr(base64_encode(openssl_random_pseudo_bytes($noncelength)), 0, $noncelength);
     }
 
     /**
@@ -574,7 +577,7 @@ class CSPGenerator {
     public function getScriptsrcNonce()
     {
         if (empty($this->scriptsrcnonce)) {
-            throw new Exception('No script-src nonce used.');
+            throw new InvalidArgumentException('No script-src nonce used.');
         }
 
         return $this->scriptsrcnonce;
@@ -587,7 +590,7 @@ class CSPGenerator {
      */
     public function getStylesrcNonce() {
         if (empty($this->stylesrcnonce)) {
-            throw new Exception('No style-src nonce used.');
+            throw new InvalidArgumentException('No style-src nonce used.');
         }
 
         return $this->stylesrcnonce;
@@ -601,11 +604,11 @@ class CSPGenerator {
     public function addConnectsrc($connectsrc)
     {
         if (!$this->isValidDirectiveValue($connectsrc)) {
-            throw new Exception('connectsrc value invalid');
+            throw new InvalidArgumentException('connectsrc value invalid');
         }
 
         if (strpos($this->connectsrc, $connectsrc) === false) {
-            $this->connectsrc .= ' ' . $connectsrc;
+            $this->connectsrc .= ' '.$connectsrc;
         }
     }
 
@@ -617,11 +620,11 @@ class CSPGenerator {
     public function addMediasrc($mediasrc)
     {
         if (!$this->isValidDirectiveValue($mediasrc)) {
-            throw new Exception('mediasrc value invalid');
+            throw new InvalidArgumentException('mediasrc value invalid');
         }
 
         if (strpos($this->mediasrc, $mediasrc) === false) {
-            $this->mediasrc .= ' ' . $mediasrc;
+            $this->mediasrc .= ' '.$mediasrc;
         }
     }
 
@@ -631,11 +634,11 @@ class CSPGenerator {
     public function addManifestsrc($manifestsrc)
     {
         if (!$this->isValidDirectiveValue($manifestsrc)) {
-            throw new Exception('manifestsrc value invalid');
+            throw new InvalidArgumentException('manifestsrc value invalid');
         }
 
         if (strpos($this->manifestsrc, $manifestsrc) === false) {
-            $this->manifestsrc .= '' . $manifestsrc;
+            $this->manifestsrc .= ' '.$manifestsrc;
         }
     }
 
@@ -647,11 +650,11 @@ class CSPGenerator {
     public function addFontsrc($fontsrc)
     {
         if (!$this->isValidDirectiveValue($fontsrc)) {
-            throw new Exception('fontsrc value invalid');
+            throw new InvalidArgumentException('fontsrc value invalid');
         }
 
         if (strpos($this->fontsrc, $fontsrc) === false) {
-            $this->fontsrc .= ' ' . $fontsrc;
+            $this->fontsrc .= ' '.$fontsrc;
         }
     }
 
@@ -664,11 +667,11 @@ class CSPGenerator {
     public function addFramesrc($framesrc)
     {
         if (!$this->isValidDirectiveValue($framesrc)) {
-            throw new Exception('framesrc value invalid');
+            throw new InvalidArgumentException('framesrc value invalid');
         }
 
         if (strpos($this->framesrc, $framesrc) === false) {
-            $this->framesrc .= ' ' . $framesrc;
+            $this->framesrc .= ' '.$framesrc;
         }
     }
 
@@ -681,11 +684,11 @@ class CSPGenerator {
     public function addChildsrc($childsrc)
     {
         if (!$this->isValidDirectiveValue($childsrc)) {
-            throw new Exception('childsrc value invalid');
+            throw new InvalidArgumentException('childsrc value invalid');
         }
 
         if (strpos($this->childsrc, $childsrc) === false) {
-            $this->childsrc .= ' ' . $childsrc;
+            $this->childsrc .= ' '.$childsrc;
         }
     }
 
@@ -701,19 +704,19 @@ class CSPGenerator {
     public function addFrameancestors($frameancestors)
     {
         if (!$this->isValidDirectiveValue($frameancestors)) {
-            throw new Exception('frameancestors value invalid');
+            throw new InvalidArgumentException('frameancestors value invalid');
         }
 
         if ($frameancestors === 'DENY') {
-            throw new Exception("Use 'none'.");
+            throw new InvalidArgumentException("Use 'none' instead of DENY.");
         } elseif ($frameancestors === 'SAMEORIGIN') {
-            throw new Exception("Use 'self'.");
+            throw new InvalidArgumentException("Use 'self' instead of SAMEORIGIN.");
         } elseif ($frameancestors === 'ALLOW') {
-            throw new Exception("Use *.");
+            throw new InvalidArgumentException("Use * instead of ALLOW.");
         }
 
         if (strpos($this->frameancestors, $frameancestors) === false) {
-            $this->frameancestors .= ' ' . $frameancestors;
+            $this->frameancestors .= ' '.$frameancestors;
         }
     }
 
@@ -725,11 +728,11 @@ class CSPGenerator {
     public function addObjectsrc($objectsrc)
     {
         if (!$this->isValidDirectiveValue($objectsrc)) {
-            throw new Exception('objectsrc value invalid');
+            throw new InvalidArgumentException('objectsrc value invalid');
         }
 
         if (strpos($this->objectsrc, $objectsrc) === false) {
-            $this->objectsrc .= ' ' . $objectsrc;
+            $this->objectsrc .= ' '.$objectsrc;
         }
     }
 
@@ -742,11 +745,11 @@ class CSPGenerator {
     public function addPlugintypes($plugintypes)
     {
         if (!$this->isValidDirectiveValue($plugintypes)) {
-            throw new Exception('plugintypes value invalid');
+            throw new InvalidArgumentException('plugintypes value invalid');
         }
 
         if (strpos($this->plugintypes, $plugintypes) === false) {
-            $this->plugintypes .= ' ' . $plugintypes;
+            $this->plugintypes .= ' '.$plugintypes;
         }
     }
 
@@ -758,11 +761,11 @@ class CSPGenerator {
     public function addFormaction($formaction)
     {
         if (!$this->isValidDirectiveValue($formaction)) {
-            throw new Exception('formaction value invalid');
+            throw new InvalidArgumentException('formaction value invalid');
         }
 
         if (strpos($this->formaction, $formaction) === false) {
-            $this->formaction .= ' ' . $formaction;
+            $this->formaction .= ' '.$formaction;
         }
     }
 
@@ -775,7 +778,7 @@ class CSPGenerator {
     public function addBaseuri($baseuri)
     {
         if (strpos($this->baseuri, $baseuri) === false) {
-            $this->baseuri .= ' ' . $baseuri;
+            $this->baseuri .= ' '.$baseuri;
         }
     }
 
@@ -794,10 +797,10 @@ class CSPGenerator {
             $sandboxoption === 'allow-scripts' ||
             $sandboxoption === 'allow-top-navigation') {
             if (strpos($this->sandboxoptions, $sandboxoption) === false) {
-                $this->sandboxoptions .= ' ' . $sandboxoption;
+                $this->sandboxoptions .= ' '.$sandboxoption;
             }
         } else {
-            throw new Exception('CSP sandbox option unknown.');
+            throw new InvalidArgumentException('CSP sandbox option unknown.');
         }
     }
 
@@ -829,7 +832,7 @@ class CSPGenerator {
                 $this->referrerpolicy = 'unsafe-url';
                 break;
             default:
-                throw new Exception('CSP referrer policy unknown.');
+                throw new InvalidArgumentException('CSP referrer policy unknown.');
                 break;
         }
     }
@@ -848,7 +851,7 @@ class CSPGenerator {
         if ($reflectedxss === 'filter' || $reflectedxss === 'block' || $reflectedxss === 'allow') {
             $this->reflectedxss = $reflectedxss;
         } else {
-            throw new Exception('CSP reflectedxss directive value unknown.');
+            throw new InvalidArgumentException('CSP reflectedxss directive value unknown.');
         }
     }
 
