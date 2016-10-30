@@ -32,6 +32,8 @@ class CSPGenerator {
 
     private $upgradeinsecurerequests = false;
 
+    private $blockmixedcontent = false;
+
     private $defaultsrc = " 'none'";
 
     private $stylesrc = " 'self'";
@@ -67,6 +69,8 @@ class CSPGenerator {
     private $sandboxoptions = '';
 
     private $referrerpolicy = '';
+
+    private $requiredsrifqdns = '';
 
     private $reflectedxss = 'filter';
 
@@ -236,7 +240,9 @@ class CSPGenerator {
             }
 
             // for inline script with the X-Content-Security-Policy header use 'options inline-script'.
-            if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] <= 22 && $useragentinfo['version'] >= 3.7) {
+            if ($useragentinfo['browser'] === 'firefox' &&
+                $useragentinfo['version'] <= 22 &&
+                $useragentinfo['version'] >= 3.7) {
                 if (strpos($this->scriptsrc, "'unsafe-inline'") >= 0) {
                     $cspheader .= '; options inline-script';
                 }
@@ -258,19 +264,30 @@ class CSPGenerator {
         }
 
         if (!empty($this->mediasrc)) {
-            $cspheader .= '; media-src'.$this->mediasrc;
+            // TODO Kookup what version Chrome added support for media-src.
+            if ($useragentinfo['browser'] !== 'firefox' || $useragentinfo['version'] >= 23) {
+                // CSP 1.0
+                $cspheader .= '; media-src'.$this->mediasrc;
+            }
         }
 
         if (!empty($this->fontsrc)) {
+            // TODO Lookup what version Chrome added support for font-src.
+            // CSP 1.0
             $cspheader .= '; font-src'.$this->fontsrc;
         }
 
         if (!empty($this->childsrc)) {
             // Experimental, CSP Level 2:
-            $cspheader .= '; child-src'.$this->childsrc;
+            // TODO lookup what version chrome add support for child-src.
+            if ($useragentinfo['browser'] !== 'firefox' || $useragentinfo['version'] >= 45) {
+                $cspheader .= '; child-src'.$this->childsrc;
+            }
         } elseif (!empty($this->framesrc)) {
-            // CSP 1.0
-            $cspheader .= '; frame-src'.$this->framesrc;
+            // CSP 1.0, DECREATED directive to be possibly removed from newer browser versions. Use child-src instead.
+            if ($useragentinfo['version'] < 100) {
+                $cspheader .= '; frame-src'.$this->framesrc;
+            }
         }
 
         if (!empty($this->frameancestors)) {
@@ -279,49 +296,49 @@ class CSPGenerator {
         }
 
         if (!empty($this->objectsrc)) {
+            // CSP 1.0
             $cspheader .= '; object-src'.$this->objectsrc;
         }
 
         // Experimental:
-        // /*
         if (!empty($this->plugintypes)) {
-            if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 27) {
+            if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 27 ||
+                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 40) {
                 $cspheader .= '; plugin-types'.$this->plugintypes;
             }
         }
-        // */
 
-        // Experimental, use in chrome:
+        // Experimental:
         if (!empty($this->manifestsrc)) {
-            $cspheader .= '; manifest-src'.$this->manifestsrc;
+            if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 41 ||
+                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 45) {
+                $cspheader .= '; manifest-src'.$this->manifestsrc;
+            }
         }
 
         // Experimental:
-        /*
         if (!empty($this->referrerpolicy)) {
-            $cspheader .= '; referrer '.$this->referrerpolicy;
+            if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 37 ||
+                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 45) {
+                $cspheader .= '; referrer '.$this->referrerpolicy;
+            }
         }
-        */
 
         // Experimental:
-        // /*
         if (!empty($this->formaction)) {
             if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 36 ||
                 $useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 27 ||
-                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 41) {
+                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 40) {
                 $cspheader .= '; form-action'.$this->formaction;
            }
         }
-        // */
 
         // Experimental:
-        /*
         if (!empty($this->reflectedxss)) {
-           if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 27) {
+           if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 54) {
                 $cspheader .= '; reflected-xss '.$this->reflectedxss;
            }
         }
-        */
 
         // Experimental:
         if (!empty($this->baseuri)) {
@@ -336,7 +353,15 @@ class CSPGenerator {
             if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 43 ||
                 $useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 42 ||
                 $useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >=30) {
+                // Not supported on Edge and Safari.
                 $cspheader .= '; upgrade-insecure-requests';
+            }
+        }
+
+        // Expertimental:
+        if ($this->blockmixedcontent) {
+            if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 54) {
+                $cspheader .= '; block-all-mixed-content';
             }
         }
 
@@ -375,7 +400,7 @@ class CSPGenerator {
                 // source: http://blogs.msdn.com/b/ieinternals/archive/2013/09/21/internet-explorer-11-user-agent-string-ua-string-sniffing-compatibility-with-gecko-webkit.aspx
                 return array('browser' => 'msie', 'version' => 11);
             } else {
-                // Unknow browser.
+                // Unknown browser.
                 return array('browser' => 'unknown', 'version' => -1.0);
             }
         }
@@ -415,7 +440,8 @@ class CSPGenerator {
 
     /**
      * Add style-src Content Security Policy 1.0 directive.
-     * In Content Security Policy Level 1.1 and Level 2, the use of 'none-$nonce' and 'sha256-$hash' is allowed for whitelisted inline style= use.
+     * In Content Security Policy Level 1.1 and Level 2, the use of 'none-$nonce' and 'sha256-$hash'
+     * is allowed for whitelisted inline style= use.
      *
      * @param string $stylesrc The style-src policy directive to add. Where to allow CSS files from use 'unsafe-inline' for style attributes in (X)HTML document.
      */
@@ -450,6 +476,9 @@ class CSPGenerator {
      * Add script-src Content Security Policy 1.0 directive.
      * In Content Security Policy 1.1 and Level 2, the use of 'none-$nonce' and 'sha256-$hash' is allowed for whitelisted inline scripts.
      * 'unsafe-inline' can be ignored by user-agent because it's so unsafe.
+     * The following Content Security Policy Level 3 special directives are allowed:
+     * 'strict-dynamic' will allow scripts to load their dependencies without them having to be whitelisted.
+     * 'unsafe-hashed-attributes'  will allow event handlers to whitelisted based on their hash.
      *
      * @param string $scriptsrc The script-src policy directive to add. Use 'unsafe-inline' to allow unsafe loading of iniline scripts, use 'unsafe-eval' to allow text-to-JavaScript mechanisms like eval.
      */
@@ -509,6 +538,7 @@ class CSPGenerator {
 
     /**
      * Set a new style nonce.
+     *
      * @param bool $enablenonce Is the use of a nonces enabled for allowing inline styles. 
      *                          Set to true to add a random 'nonce-$random' to style-src directive
      *                          and set to false to remove 'nonce-$random' from the style-src directive.
@@ -588,7 +618,8 @@ class CSPGenerator {
      *
      * @return string The nonce string.
      */
-    public function getStylesrcNonce() {
+    public function getStylesrcNonce()
+    {
         if (empty($this->stylesrcnonce)) {
             throw new InvalidArgumentException('No style-src nonce used.');
         }
@@ -597,7 +628,8 @@ class CSPGenerator {
     }
 
     /**
-     * Add connect-src Content Security Policy Level 1 directive.
+     * Add connect-src Content Security Policy 1.0 directive.
+     * Status: Candidate Recommendation.
      *
      * @param string $connectsrc The connect-src policy directive to add. Where to allow XMLHttpRequest to connect to.
      */
@@ -613,7 +645,8 @@ class CSPGenerator {
     }
 
     /**
-     * Add media-src Content Security Policy Level 1 directive.
+     * Add media-src Content Security Policy 1.0 directive.
+     * Status: Candidate Recommendation.
      *
      * @param string $mediasrc The media-src policy directive to add. Where to allow to load video/audio sources from. Use mediastream: for the MediaStream API. 
      */
@@ -629,7 +662,8 @@ class CSPGenerator {
     }
 
     /**
-     * Add manifest-src Security Policy Level 2 directive. (Experimental Directive)
+     * Add manifest-src Security Policy Level 2 directive.
+     * Status: Candidate Recommendation.
      */
     public function addManifestsrc($manifestsrc)
     {
@@ -643,7 +677,8 @@ class CSPGenerator {
     }
 
     /**
-     * Add font-src Content Security Policy Level 1 directive.
+     * Add font-src Content Security Policy 1.0 directive.
+     * Status: Candidate Recommendation.
      *
      * @param string $fontsrc The font-src policy directive to add. Where to allow to load font files from.
      */
@@ -659,8 +694,9 @@ class CSPGenerator {
     }
 
     /**
-     * Add frame-src Content Security Policy Level 1 directive.
-     * frame-src is decreated in Content Security Policy Level 2 in favor of the child-src directive.
+     * Add frame-src Content Security Policy 1.0 directive.
+     * Warning: frame-src is decreated in Content Security Policy Level 2 in favor of the child-src directive.
+     * Status: DECREATED
      *
      * @param string $framesrc The frame-src policy directive to add. Where to allow to load frames/iframe from.
      */
@@ -676,8 +712,9 @@ class CSPGenerator {
     }
 
     /**
-     * Add the child-src Content Security Policy Level 2 directive. (Experimental Directive)
+     * Add the child-src Content Security Policy Level 2 directive.
      * This directive also applies to the decreated frame-src directive.
+     * Status: Candidate Recommendation.
      *
      * @param string $childsrc The child-src policy directive to add. Where webworkers and frames/iframe are allowed to load from.
      */
@@ -693,8 +730,9 @@ class CSPGenerator {
     }
 
     /**
-     * Add the frame-ancestors Content Security Policy Level 2 directive. (Experimental Directive)
+     * Add the frame-ancestors Content Security Policy Level 2 directive.
      * This directive does the same as the X-Frame-Options header.
+     * Status: Candidate Recommendation.
      *
      * @param string $frameancestors The frame-ancestors policy directive to add.
      *                               'self' is the same as X-Frame-Options: SAMEORIGIN,
@@ -721,7 +759,8 @@ class CSPGenerator {
     }
 
     /**
-     * Add object-src Content Security Policy 1.0 directive.
+     * Add the object-src Content Security Policy 1.0 directive.
+     * Status: Candidate Recommendation.
      *
      * @param string $objectsrc The object-src policy directive to add. Where to allow to load plugins objects like flash/java applets from.
      */
@@ -737,7 +776,8 @@ class CSPGenerator {
     }
 
     /**
-     * Add plugin-types Content Security Policy Level 2 directive. (Experimental Directive)
+     * Add the plugin-types Content Security Policy Level 2 directive.
+     * Status: Candidate Recommendation.
      *
      * @param string $plugintypes The plugin-types policy directive to add. A list of MIME types
      *         (e.g. application/x-shockwave-flash, application/pdf) of plugins allowed to load.
@@ -754,7 +794,8 @@ class CSPGenerator {
     }
 
     /**
-     * Add form-action Content Security Policy Level 2 directive. (Experimental Directive)
+     * Add the form-action Content Security Policy Level 2 directive.
+     * Status: Candidate Recommendation.
      *
      * @param string $formaction The form-action policy directive to add. Restricts which URIs can be used as the action of HTML form elements.
      */
@@ -770,8 +811,9 @@ class CSPGenerator {
     }
 
     /**
-     * Add base-uri Content Security Policy 1.1 directive. (Experimental Directive)
+     * Add the base-uri Content Security Policy Level 2 directive.
      * This directive is by default not restricted by the default-src directive.
+     * Status: Candidate Recommendation.
      *
      * @param string $baseuri The base-uri policy directive to add. Defines the URIs that a user agent may use as the document base URL.
      */
@@ -784,6 +826,7 @@ class CSPGenerator {
 
     /**
      * Add sandbox options to the sandbox Content Security Policy 1.0 directive.
+     * Status: Candidate Recommendation.
      *
      * @param string $sandboxoption The sandbox policy directive to add. This can be: allow-forms, allow-pointer-lock, allow-popups, allow-same-origin, allow-scripts or allow-top-navigation.
      */
@@ -805,12 +848,14 @@ class CSPGenerator {
     }
 
     /**
-     * Set the referrer policy, this will change the behavoir how the user-agent sends the referrer(HTTP field: referer) header for your origin.
+     * Set the referrer policy. This directive will change the behavoir how the user-agent sends the referrer(HTTP field: referer).
+     * Status: Working Draft.
      *
      * @param string $referrerpolicy The referrer policy can be one of these values:
      *                               "no-referrer"(obsolete policy name: "never"), do not send any http referrer header at all. Most privacy friendly, but not good choice as weak protection if implemented against CSRF.
      *                               "no-referrer-when-downgrade"(obsolete policy name: "default"), default bevavior when no policy. Will send the full referrer but do not send referrer header when coming from https to protect you from dislosing your session url.
-     *                               "origin" only send the domain(e.g. www.example.tld) and not the query string path.(e.g. /page2.htm). A bit more privacy friendly than the full referrer.
+     *                               "origin" only send the domain(e.g. www.example.tld) and not the query string path.(e.g. /page2.htm). A bit more privacy friendly than the full referrer but not when going from https to http.
+     *                               "origin-when-cross-origin" Only send origin when going to a different origin but not when going from https to http.
      *                               "unsafe-url"(obsolete policy name: "always"). Will always send the full referrer. This will also send the full referrer on HTTP when coming from a HTTPS site and that can be a security(session urls) and privacy issue.
      */
     public function setReferrerPolicy($referrerpolicy)
@@ -823,6 +868,12 @@ class CSPGenerator {
             case 'never':
             case 'no-referrer':
                 $this->referrerpolicy = 'no-referrer';
+                break;
+            case 'same-origin':
+                $this->referrerpolicy = 'same-origin';
+                break;
+            case 'origin-when-cross-origin':
+                $this->referrerpolicy = 'origin-when-cross-origin';
                 break;
             case 'origin':
                 $this->referrerpolicy = 'origin';
@@ -838,7 +889,8 @@ class CSPGenerator {
     }
 
     /**
-     * Set reflected-xss content security policy 1.1>= policy setting. (Experimental directive)
+     * Set reflected-xss Policy Content Security Policy Level 2 directive.
+     * Status: Candidate Recommendation.
      *
      * @param string $reflectedxss The reflected-xss policy. This can be:
      *                             "allow" no url filtering, does the same as X-XSS-Protection: 0;
@@ -856,16 +908,59 @@ class CSPGenerator {
     }
 
     /**
-     * Set upgrade-insecure-requests content security policy 1.1>= policy directive. (Experimental, Working Draft directive)
+     * Set a fully qualified domain names to require Subresource Integrity(SRI) for 
+     * with this Content Security Policy Level 3 directive.
+     * Status: Working Draft.
+     * 
+     * @param string $fqdn A fully qualified domain name.
+     */
+    public function setRequireSRIfor($fqdn)
+    {
+        if (empty($fqdn)) {
+            throw new InvalidArgumentException('No fully qualified domain name value provided.');
+        } elseif (!$this->isValidFQDN($fqdn)) {
+            throw new InvalidArgumentException('Given value cannot be a valid fully qualified domain name.');
+        }
+
+        $fqdnwithspaceprefix = ' '.$fqdn;
+        if (strpos($this->requiredsrifqdns, $fqdnwithspaceprefix) === false) {
+            $this->requiredsrifqdns .= $fqdnwithspaceprefix;
+        }
+    }
+
+    /**
+     * Set the Upgrade-Insecure-Requests policy directive.
      * This directive makes the user-agent rewrite all resources starting with http:// request httpS:// resources on the page.
      * Specifications: http://www.w3.org/TR/upgrade-insecure-requests/
      * Demo page: https://googlechrome.github.io/samples/csp-upgrade-insecure-requests/index.html
+     * Status: Candidate Recommendation.
      *
      * @param bool Should the upgrade-insecure-requests directive been added to the content security policy header.
      */
     public function setUpgradeInsecureRequests($upgradeinsecurerequests = true)
     {
+        if (!is_bool($upgradeinsecurerequests)) {
+            throw new InvalidArgumentException('upgradeinsecurerequests needs to be a boolean.');
+        }
+
         $this->upgradeinsecurerequests = $upgradeinsecurerequests;
+    }
+
+    /**
+     * Set the block-all-mixed-content Security Policy Level 3 directive to avoid loading insecure 
+     * content on a secure origin. Without the this set to true passive content over insecure http 
+     * could still be not blocked. Passive content is: <img> src, <audio> src and <video> src.
+     * Status: Working Draft.
+     *
+     * @param bool $blockmixedcontent True to never load any content(strict mode) over http:// on the current page if loaded over https.
+     */
+    public function setBlockMixedContent($blockmixedcontent = true)
+    {
+        if (!is_bool($blockmixedcontent)) {
+            throw new InvalidArgumentException('blockmixedcontent needs to be a boolean.');
+        }
+
+        $this->blockmixedcontent = $blockmixedcontent;
     }
 
     /**
@@ -883,5 +978,19 @@ class CSPGenerator {
         }
 
         return true;
+    }
+
+    /**
+     * Check if the provide value is a valid fully qualified domain name.
+     * original code from http://stackoverflow.com/questions/1755144/how-to-validate-domain-name-in-php
+     *
+     * @param string $fqdnvalue
+     * @return bool True if fqdnvalue is a valid fully qualified domain name.
+     */
+    private function isValidFQDN($fqdnvalue)
+    {
+        return (preg_match("/^([a-z\d](-*[a-z\d])*)(\.([a-z\d](-*[a-z\d])*))*$/i", $fqdnvalue)
+            && preg_match("/^.{1,253}$/", $fqdnvalue)
+            && preg_match("/^[^\.]{1,63}(\.[^\.]{1,63})*$/", $fqdnvalue));
     }
 }
