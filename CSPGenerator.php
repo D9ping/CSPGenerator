@@ -335,9 +335,10 @@ class CSPGenerator {
 
         // Experimental:
         if (!empty($this->reflectedxss)) {
-           if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 54) {
+            if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 60) {
+                // Not implemented in Chromium 56.0.2915
                 $cspheader .= '; reflected-xss '.$this->reflectedxss;
-           }
+            }
         }
 
         // Experimental:
@@ -352,7 +353,7 @@ class CSPGenerator {
         if ($this->upgradeinsecurerequests) {
             if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 43 ||
                 $useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 42 ||
-                $useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >=30) {
+                $useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 30) {
                 // Not supported on Edge and Safari.
                 $cspheader .= '; upgrade-insecure-requests';
             }
@@ -360,7 +361,8 @@ class CSPGenerator {
 
         // Expertimental:
         if ($this->blockmixedcontent) {
-            if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 54) {
+            if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 56) {
+                // Worked on Chromium 56.0.2915
                 $cspheader .= '; block-all-mixed-content';
             }
         }
