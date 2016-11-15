@@ -147,6 +147,12 @@ class CSPGenerator {
             }
         }
 
+        if (!empty($this->referrerpolicy)) {
+            if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 50) {
+                header('Referrer-Policy: '.$this->referrerpolicy, true);
+            }
+        }
+
         // Add X-XSS-Protection header based on CSP 1.1 settings.
         switch ($this->reflectedxss) {
             case 'filter':
@@ -264,7 +270,7 @@ class CSPGenerator {
         }
 
         if (!empty($this->mediasrc)) {
-            // TODO Kookup what version Chrome added support for media-src.
+            // TODO Lookup what version Chrome added support for media-src.
             if ($useragentinfo['browser'] !== 'firefox' || $useragentinfo['version'] >= 23) {
                 // CSP 1.0
                 $cspheader .= '; media-src'.$this->mediasrc;
@@ -850,14 +856,16 @@ class CSPGenerator {
     }
 
     /**
-     * Set the referrer policy. This directive will change the behavoir how the user-agent sends the referrer(HTTP field: referer).
+     * Set the referrer policy. This directive will change the behavoir how the user-agent sends the referrer(Mispelled HTTP header field: referer).
      * Status: Working Draft.
      *
      * @param string $referrerpolicy The referrer policy can be one of these values:
      *                               "no-referrer"(obsolete policy name: "never"), do not send any http referrer header at all. Most privacy friendly, but not good choice as weak protection if implemented against CSRF.
      *                               "no-referrer-when-downgrade"(obsolete policy name: "default"), default bevavior when no policy. Will send the full referrer but do not send referrer header when coming from https to protect you from dislosing your session url.
-     *                               "origin" only send the domain(e.g. www.example.tld) and not the query string path.(e.g. /page2.htm). A bit more privacy friendly than the full referrer but not when going from https to http.
+     *                               "origin" only send the domain(e.g. www.example.tld) and not the uri(e.g. /page2.htm). A bit more privacy friendly than the full referrer but not when going from https to http.
+     *                               "strict-origin" send the domain(e.g. www.exmaple.tld) and also for navigating to subdomain(e.g. not.example.tld). But never send and the uri(the page).
      *                               "origin-when-cross-origin" Only send origin when going to a different origin but not when going from https to http.
+     *                               "strict-origin-when-cross-origin" Send origin when going to a different origin and send only origin when going to subdomain. Do send full url when navigating on same origin. But do not send any referrer when going from https to http on any origin.
      *                               "unsafe-url"(obsolete policy name: "always"). Will always send the full referrer. This will also send the full referrer on HTTP when coming from a HTTPS site and that can be a security(session urls) and privacy issue.
      */
     public function setReferrerPolicy($referrerpolicy)
@@ -877,15 +885,21 @@ class CSPGenerator {
             case 'origin-when-cross-origin':
                 $this->referrerpolicy = 'origin-when-cross-origin';
                 break;
+            case 'strict-origin-when-cross-origin':
+                $this->referrerpolicy = 'strict-origin-when-cross-origin';
+                break;
             case 'origin':
                 $this->referrerpolicy = 'origin';
+                break;
+            case 'strict-origin':
+                $this->referrerpolicy = 'strict-origin';
                 break;
             case 'always':
             case 'unsafe-url':
                 $this->referrerpolicy = 'unsafe-url';
                 break;
             default:
-                throw new InvalidArgumentException('CSP referrer policy unknown.');
+                throw new InvalidArgumentException('Referrer policy value unknown.');
                 break;
         }
     }

@@ -8,6 +8,7 @@ $jscode = "
   var _gaq = _gaq || [];
   _gaq.push(['_setAccount', 'UA-XXXXXXXX']);
   _gaq.push(['_trackPageview']);
+  _gaq.push(['_gat._anonymizeIp']);
   (function() {
     var ga = document.createElement('script');
     ga.type = 'text/javascript';
@@ -40,7 +41,8 @@ CSPGenerator::getInstance()->Parse();
 	<script type="application/javascript"><?php echo $jscode; ?></script>
 	<!-- Not whitelisted inline script: -->
 	<script type="application/javascript">
-alert('This should not popup.'); 
+alert('This should not popup.');
 	</script>
+	See page sourcecode.
 	</body>
 </html>
