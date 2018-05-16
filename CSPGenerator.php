@@ -1,6 +1,6 @@
 <?php 
 /*
-Copyright (c) 2014-2016, Tom
+Copyright (c) 2014-2018, Tom
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted 
@@ -55,6 +55,8 @@ class CSPGenerator {
     private $fontsrc = '';
 
     private $framesrc = '';
+
+    private $workersrc = '';
 
     private $childsrc = '';
 
@@ -200,7 +202,7 @@ class CSPGenerator {
     {
         $cspheader = 'Content-Security-Policy: ';
         if ($useragentinfo['browser'] === 'chrome') {
-            // Whitelist google translate, because it's commonly enabled and used:
+            // Whitelist google translate, because it's commonly enabled and used by chrome webbrowsers:
             $this->addConnectsrc('https://translate.googleapis.com');
             // unsafe-inline is needed for google translate to display the content:
             $this->addStylesrc("'unsafe-inline'");
@@ -290,16 +292,24 @@ class CSPGenerator {
             $cspheader .= '; font-src'.$this->fontsrc;
         }
 
-        if (!empty($this->childsrc)) {
-            // Experimental, CSP Level 2:
-            // TODO lookup what version chrome add support for child-src.
-            if ($useragentinfo['browser'] !== 'firefox' || $useragentinfo['version'] >= 45) {
-                $cspheader .= '; child-src'.$this->childsrc;
+        if (empty($this->workersrc) && empty($this->framesrc)) {
+            if (!empty($this->childsrc)) {
+                // Decreated, only CSP Level 2:
+                if ($useragentinfo['browser'] == 'chrome' || $useragentinfo['version'] >= 45) {
+                    $cspheader .= '; child-src'.$this->childsrc;
+                }
             }
-        } elseif (!empty($this->framesrc)) {
-            // CSP 1.0, DECREATED directive to be possibly removed from newer browser versions. Use child-src instead.
-            if ($useragentinfo['version'] < 100) {
-                $cspheader .= '; frame-src'.$this->framesrc;
+        } else {
+            if (!empty($this->framesrc)) {
+                // CSP 1.0,
+                if ($useragentinfo['version'] < 100) {
+                    $cspheader .= '; frame-src'.$this->framesrc;
+                }
+            }
+
+            if (!empty($this->workersrc)) {
+                // CSP 3
+                $cspheader .= '; worker-src'.$this->workersrc;
             }
         }
 
@@ -372,7 +382,6 @@ class CSPGenerator {
             }
         }
 
-        // Expertimental:
         if ($this->blockmixedcontent) {
             if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 56) {
                 // Worked on Chromium 56.0.2915
@@ -439,7 +448,9 @@ class CSPGenerator {
     /**
      * Set the default-src content security policy directive. Don't allow an empty default policy.
      *
-     * @param string $defaultsrc The default-src policy directive. Style-src, image-src, script-src, frame-src, connect-src, font-src, objectsrc and media-src all inherit from this.
+     * @param string $defaultsrc The default-src policy directive. Style-src, image-src, 
+     *                           script-src, frame-src, connect-src, font-src, objectsrc
+     *                           and media-src all inherit from this.
      */
     public function setDefaultsrc($defaultsrc)
     {
@@ -459,7 +470,8 @@ class CSPGenerator {
      * In Content Security Policy Level 1.1 and Level 2, the use of 'none-$nonce' and 'sha256-$hash'
      * is allowed for whitelisted inline style= use.
      *
-     * @param string $stylesrc The style-src policy directive to add. Where to allow CSS files from use 'unsafe-inline' for style attributes in (X)HTML document.
+     * @param string $stylesrc The style-src policy directive to add. Where to allow CSS
+     *                         files from use 'unsafe-inline' for style attributes in (X)HTML document.
      */
     public function addStylesrc($stylesrc)
     {
@@ -475,7 +487,8 @@ class CSPGenerator {
     /**
      * Add image-src Content Security Policy 1.0 directive.
      *
-     * @param string $imagesrc The image-src policy directive to add. Where to allow images from. Use data: for base64 data url images.
+     * @param string $imagesrc The image-src policy directive to add. Where to allow images from. 
+     *                         Use data: for base64 data url images.
      */
     public function addImagesrc($imagesrc)
     {
@@ -559,7 +572,8 @@ class CSPGenerator {
      *                          Set to true to add a random 'nonce-$random' to style-src directive
      *                          and set to false to remove 'nonce-$random' from the style-src directive.
      * @param int  $noncelength The length of the new nonce. It's recommended to use (at least)128 bits nonces.
-     *                          With the use of all ASCII printable characters you get about 6.570 bits entropy per character.
+     *                          With the use of all ASCII printable characters you get
+     *                          about 6.570 bits entropy per character.
      */
     public function setStylesrcNonce($enablenonce = true, $noncelength = 20)
     {
@@ -712,7 +726,6 @@ class CSPGenerator {
     /**
      * Add frame-src Content Security Policy 1.0 directive.
      * Warning: frame-src is decreated in Content Security Policy Level 2 in favor of the child-src directive.
-     * Status: DECREATED
      *
      * @param string $framesrc The frame-src policy directive to add. Where to allow to load frames/iframe from.
      */
@@ -728,14 +741,32 @@ class CSPGenerator {
     }
 
     /**
+     * Added allowed web worker sources.
+     *
+     * @param string $workersrc 
+     */
+    public function addWorkersrc($workersrc)
+    {
+        if (!$this->isValidDirectiveValue($workersrc)) {
+            throw new InvalidArgumentException('workersrc value invalid');
+        }
+
+        if (strpos($this->workersrc, $workersrc) === false) {
+            $this->workersrc .= ' '.$workersrc;
+        }
+    }
+
+    /**
      * Add the child-src Content Security Policy Level 2 directive.
      * This directive also applies to the decreated frame-src directive.
-     * Status: Candidate Recommendation.
+     * Status: decreated.
      *
-     * @param string $childsrc The child-src policy directive to add. Where webworkers and frames/iframe are allowed to load from.
+     * @param string $childsrc The child-src policy directive to add. Where webworkers and
+     *                         frames/iframe are allowed to load from.
      */
     public function addChildsrc($childsrc)
     {
+        error_log('Decreated child-src used, replace calls to addChildsrc with: addFramesrc or addWorkersrc.');
         if (!$this->isValidDirectiveValue($childsrc)) {
             throw new InvalidArgumentException('childsrc value invalid');
         }
@@ -778,7 +809,8 @@ class CSPGenerator {
      * Add the object-src Content Security Policy 1.0 directive.
      * Status: Candidate Recommendation.
      *
-     * @param string $objectsrc The object-src policy directive to add. Where to allow to load plugins objects like flash/java applets from.
+     * @param string $objectsrc The object-src policy directive to add. Where to allow to 
+     *                          load plugins objects like flash/java applets from.
      */
     public function addObjectsrc($objectsrc)
     {
@@ -813,7 +845,8 @@ class CSPGenerator {
      * Add the form-action Content Security Policy Level 2 directive.
      * Status: Candidate Recommendation.
      *
-     * @param string $formaction The form-action policy directive to add. Restricts which URIs can be used as the action of HTML form elements.
+     * @param string $formaction The form-action policy directive to add. Restricts which 
+     *                           URI's can be used as the action of HTML form elements.
      */
     public function addFormaction($formaction)
     {
@@ -831,7 +864,8 @@ class CSPGenerator {
      * This directive is by default not restricted by the default-src directive.
      * Status: Candidate Recommendation.
      *
-     * @param string $baseuri The base-uri policy directive to add. Defines the URIs that a user agent may use as the document base URL.
+     * @param string $baseuri The base-uri policy directive to add.  Defines the URIs that 
+     *                        a user agent may use as the document base URL.
      */
     public function addBaseuri($baseuri)
     {
@@ -974,7 +1008,7 @@ class CSPGenerator {
      * Set the block-all-mixed-content Security Policy Level 3 directive to avoid loading insecure 
      * content on a secure origin. Without the this set to true passive content over insecure http 
      * could still be not blocked. Passive content is: <img> src, <audio> src and <video> src.
-     * Status: Working Draft.
+     * Status: Candidate recommendation:.
      *
      * @param bool $blockmixedcontent True to never load any content(strict mode) over http:// on the current page if loaded over https.
      */
@@ -1013,8 +1047,8 @@ class CSPGenerator {
      */
     private function isValidFQDN($fqdnvalue)
     {
-        return (preg_match("/^([a-z\d](-*[a-z\d])*)(\.([a-z\d](-*[a-z\d])*))*$/i", $fqdnvalue)
-            && preg_match("/^.{1,253}$/", $fqdnvalue)
-            && preg_match("/^[^\.]{1,63}(\.[^\.]{1,63})*$/", $fqdnvalue));
+        return (preg_match("/^([a-z\d](-*[a-z\d])*)(\.([a-z\d](-*[a-z\d])*))*$/i", $fqdnvalue) &&
+                preg_match("/^.{1,253}$/", $fqdnvalue) &&
+                preg_match("/^[^\.]{1,63}(\.[^\.]{1,63})*$/", $fqdnvalue));
     }
 }
