@@ -10,8 +10,8 @@ require_once('../CSPGenerator.php');
 		<?php echo CSPGenerator::getInstance()->getMetatagContentSecurityPolicy(); ?>
 	</head>
 	<body>
-	The Content Security Policy in the META tag can cannot use frame-ancestors, report-uri,<br />
-	or sandbox directives and has currently limited browser support. The META tag CSP<br />
+	The Content Security Policy in the META tag can cannot use frame-ancestors, report-uri,
+	report-to or sandbox directives and has currently limited browser support. The META tag CSP<br />
 	provides weaker security because an injection before the META tag can still change things.<br />
 	</body>
 </html>
