@@ -76,7 +76,7 @@ class CSPGenerator {
 
     private $baseuri = '';
 
-    private $reporturi = '';
+    private $reportto = '';
 
     const NONCEMINLENGTH = 10;
 
@@ -101,16 +101,23 @@ class CSPGenerator {
 
     /**
      * Set the url to where to report violations of the Content Security Policy.
+     * Will also set the decreated report-uri Content Security Policy directive.
      *
-     * @param $string $reporturi The uri to report the Content Security Policy violation reports on.
+     * @param $string $reportto The url to report the Content Security Policy violation reports on.
      */
-    public function setReporturi($reporturi)
+    public function setReportTo($reportto)
     {
-        if (!$this->isValidDirectiveValue($reporturi)) {
-            throw new InvalidArgumentException('reporturi invalid.');
+        if (!$this->isValidDirectiveValue($reportto)) {
+            throw new InvalidArgumentException('reportto invalid.');
         }
 
-        $this->reporturi = $reporturi;
+        $this->reportto = $reportto;
+    }
+
+    public function setReporturi($reporturidecreated)
+    {
+        error_log('Called decreated setReporturi function. Replace this with setReportTo.');
+        $this->setReportTo($reporturidecreated);
     }
 
     /**
@@ -373,8 +380,9 @@ class CSPGenerator {
             }
         }
 
-        if (!empty($this->reporturi)) {
-            $cspheader .= '; report-uri '.$this->reporturi;
+        if (!empty($this->reportto)) {
+            $cspheader .= '; report-uri '.$this->reportto;
+            $cspheader .= '; report-to '.$this->reportto;
         }
 
         return $cspheader;
