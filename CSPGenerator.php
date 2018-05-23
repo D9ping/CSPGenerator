@@ -30,6 +30,8 @@ class CSPGenerator {
 
     private $reportonly = false;
 
+    private $hasconsent = false;
+
     private $upgradeinsecurerequests = false;
 
     private $blockmixedcontent = false;
@@ -104,8 +106,13 @@ class CSPGenerator {
     /**
      * Set the url to where to report violations of the Content Security Policy.
      * Will also set the decreated report-uri Content Security Policy directive.
+     * GDPR:
+     * Consent may be needed in EU under GDPR, for the data that could possibly identify a persons by 
+     * the combination user-agent and other browser details and the possible webbrowser extension(s) causing
+     * the Content Security Policy violation report. Beside this, consent is needed when using a 
+     * third party Content Security Policy collection and/or analyze service.
      *
-     * @param $string $reportto The url to report the Content Security Policy violation reports on.
+     * @param string $reportto The url to report the Content Security Policy violation reports on.
      */
     public function setReportTo($reportto)
     {
@@ -116,10 +123,15 @@ class CSPGenerator {
         $this->reportto = $reportto;
     }
 
-    public function setReporturi($reporturidecreated)
+    /**
+     * Decreated function, replaced by setReportTo function.
+     *
+     * @param string $reporturi The uri to report the Content Security Policy violation reports on.
+     */
+    public function setReporturi($reporturi)
     {
         error_log('Called decreated setReporturi function. Replace this with setReportTo.');
-        $this->setReportTo($reporturidecreated);
+        $this->setReportTo($reporturi);
     }
 
     /**
@@ -128,6 +140,18 @@ class CSPGenerator {
     public function setReportOnly()
     {
         $this->reportonly = true;
+    }
+
+    /**
+     * Set the consent status for the use of setting the reportTo directive, so content security
+     * policy violations reports could be send by the webbrowser with consent from the user.
+     * (e.g. Set this only to true if some consent cookie is available with the required value.)
+     *
+     * @param bool $consent Is consent given, if true this will allow setting the reportTo/reporturi directive.
+     */
+    public function setReportConsent($consent)
+    {
+        $this->hasconsent = $consent;
     }
 
     /**
@@ -389,7 +413,7 @@ class CSPGenerator {
             }
         }
 
-        if (!empty($this->reportto)) {
+        if (!empty($this->reportto) && $this->hasconsent) {
             $cspheader .= '; report-uri '.$this->reportto;
             $cspheader .= '; report-to '.$this->reportto;
         }
