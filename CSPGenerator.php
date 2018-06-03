@@ -420,17 +420,10 @@ class CSPGenerator {
 
         if (!empty($this->requiresrifor)) {
             if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 54 ||
-                $useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] > 49
+                $useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 49
             ) {
-                // Firefox 49 needs security.csp.experimentalEnabled set to true.
-                $cspheader .= '; require-sri-for'.$this->requiresrifor;
-            }
-        }
-
-        if (!empty($this->requiresrifor)) {
-            if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 54 ||
-                $useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] > 49) {
-                // Firefox 49 needs security.csp.experimentalEnabled set to true.
+                // Firefox 49 till 60 needs security.csp.experimentalEnabled set to true
+                // for this CSP 3.0 directive to work.
                 $cspheader .= '; require-sri-for'.$this->requiresrifor;
             }
         }
@@ -1012,12 +1005,12 @@ class CSPGenerator {
     }
 
     /**
-     * Require scripts or stylesheets to have Subresource Integrity(SRI) hashes.
-     * Status: Working Draft.
+     * Require subresource intrigy for script(s) or stylesheet(s)
+     * Status: 
      * 
-     * @param string $resource Can be "script" and/or "style".
+     * @param string $resource Can be a string "script" or "style".
      */
-    public function setRequireSRIfor($resource)
+    public function addRequireSRIfor($resource)
     {
         $resource = strtolower($resource);
         if ($resource !== 'script' && $resource !== 'style') {
