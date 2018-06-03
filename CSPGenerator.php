@@ -50,7 +50,7 @@ class CSPGenerator {
 
     private $mediasrc = '';
 
-    private $manifestsrc = '';
+    private $manifestsrc = " 'self'";
 
     private $fontsrc = '';
 
@@ -72,7 +72,7 @@ class CSPGenerator {
 
     private $referrerpolicy = '';
 
-    private $requiredsrifqdns = '';
+    private $requiresrifor = '';
 
     private $reflectedxss = 'filter';
 
@@ -157,7 +157,9 @@ class CSPGenerator {
         }
 
         if (!empty($this->referrerpolicy)) {
-            if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 50) {
+            if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 50 ||
+                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 56 ||
+                $useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 48) {
                 header('Referrer-Policy: '.$this->referrerpolicy, true);
             }
         }
@@ -202,11 +204,13 @@ class CSPGenerator {
     {
         $cspheader = 'Content-Security-Policy: ';
         if ($useragentinfo['browser'] === 'chrome') {
-            // Whitelist google translate, because it's commonly enabled and used by chrome webbrowsers:
+            // Whitelist google translate, because it's commonly enabled and
+            // used in chrome webbrowsers:
             $this->addConnectsrc('https://translate.googleapis.com');
             // unsafe-inline is needed for google translate to display the content:
             $this->addStylesrc("'unsafe-inline'");
-            // You can also comment out the above lines and add: <meta name="google" content="notranslate" />
+            // You can also comment out the above lines and add: 
+            // <meta name="google" content="notranslate" />
         }
 
         if ($this->reportonly) {
@@ -224,7 +228,8 @@ class CSPGenerator {
             $cspheader .= 'allow '.$this->defaultsrc;
         } elseif ( ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] <= 24 && $useragentinfo['version'] >= 14) || 
                    ($useragentinfo['browser'] === 'safari' && $useragentinfo['version'] >= 6 && $useragentinfo['version'] < 7) ) {
-            // Safari 5.0/5.1 X-WebKit-CSP implementation is badly broken it blocks permited\whitelisted things so it's not usable at all.
+            // Safari 5.0/5.1 X-WebKit-CSP implementation is badly broken it blocks 
+            // permited whitelisted things so it's not usable at all.
             if ($this->reportonly) {
                 $cspheader = 'X-WebKit-CSP-Report-Only: ';
             } else {
@@ -237,7 +242,8 @@ class CSPGenerator {
         }
 
         if (!empty($this->stylesrc)) {
-            // The obsolete decreated X-Content-Security-Policy header does not support style-src. This is not implemented.
+            // The obsolete decreated X-Content-Security-Policy header does not
+            // support style-src. This is not implemented.
             $cspheader .= '; style-src'.$this->stylesrc;
             if (!empty($this->stylesrcnonce)) {
                 $cspheader .= " 'nonce-".$this->stylesrcnonce."'";
@@ -256,8 +262,7 @@ class CSPGenerator {
 
             // for inline script with the X-Content-Security-Policy header use 'options inline-script'.
             if ($useragentinfo['browser'] === 'firefox' &&
-                $useragentinfo['version'] <= 22 &&
-                $useragentinfo['version'] >= 3.7) {
+                $useragentinfo['version'] <= 22 && $useragentinfo['version'] >= 3.7) {
                 if (strpos($this->scriptsrc, "'unsafe-inline'") >= 0) {
                     $cspheader .= '; options inline-script';
                 }
@@ -279,9 +284,11 @@ class CSPGenerator {
         }
 
         if (!empty($this->mediasrc)) {
-            // TODO Lookup what version Chrome added support for media-src.
-            if ($useragentinfo['browser'] !== 'firefox' || $useragentinfo['version'] >= 23) {
-                // CSP 1.0
+            if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 23 ||
+                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 25 ||
+                $useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 15 ||
+                $useragentinfo['browser'] === 'safari' && $useragentinfo['version'] >= 7 ||
+                $useragentinfo['browser'] === 'edge' && $useragentinfo['version'] >= 14) {
                 $cspheader .= '; media-src'.$this->mediasrc;
             }
         }
@@ -295,20 +302,18 @@ class CSPGenerator {
         if (empty($this->workersrc) && empty($this->framesrc)) {
             if (!empty($this->childsrc)) {
                 // Decreated, only CSP Level 2:
-                if ($useragentinfo['browser'] == 'chrome' || $useragentinfo['version'] >= 45) {
+                if ($useragentinfo['browser'] === 'chrome' || $useragentinfo['version'] >= 45) {
                     $cspheader .= '; child-src'.$this->childsrc;
                 }
             }
         } else {
             if (!empty($this->framesrc)) {
-                // CSP 1.0,
-                if ($useragentinfo['version'] < 100) {
-                    $cspheader .= '; frame-src'.$this->framesrc;
-                }
+                // CSP 1.0 directive, decreated in CSP 2.0 and Undeprecate in CSP 3.0.
+                $cspheader .= '; frame-src'.$this->framesrc;
             }
 
             if (!empty($this->workersrc)) {
-                // CSP 3
+                // CSP 3.0
                 $cspheader .= '; worker-src'.$this->workersrc;
             }
         }
@@ -331,61 +336,70 @@ class CSPGenerator {
             }
         }
 
-        // Experimental:
+        // Manifest for Progressive Web App(PWA)
         if (!empty($this->manifestsrc)) {
             if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 41 ||
-                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 45) {
+                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 45 ||
+                $useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 27) {
                 $cspheader .= '; manifest-src'.$this->manifestsrc;
             }
         }
 
-        // Experimental:
+        // Decreated in CSP:
         if (!empty($this->referrerpolicy)) {
-            if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 37 ||
-                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 45) {
+            if ($useragentinfo['browser'] === 'firefox' &&
+                $useragentinfo['version'] >= 37 && $useragentinfo['version'] < 50) {
+                // Decreated in CSP, do not send as CSP but as seperate http header.
                 $cspheader .= '; referrer '.$this->referrerpolicy;
             }
         }
 
-        // Experimental:
+        // CSP 2.0 / Recommendation:
         if (!empty($this->formaction)) {
             if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 36 ||
+                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 40 ||
                 $useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 27 ||
-                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 40) {
+                $useragentinfo['browser'] === 'safari' && $useragentinfo['version'] >= 10 ||
+                $useragentinfo['browser'] === 'edge' && $useragentinfo['version'] >= 15) {
                 $cspheader .= '; form-action'.$this->formaction;
            }
         }
 
-        // Experimental:
-        if (!empty($this->reflectedxss)) {
-            if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 60) {
-                // Not implemented in Chromium 56.0.2915
-                $cspheader .= '; reflected-xss '.$this->reflectedxss;
-            }
-        }
-
-        // Experimental:
+        // CSP 2.0 / Recommendation:
         if (!empty($this->baseuri)) {
             if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 35 ||
-                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 40) {
+                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 40 ||
+                $useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 27 ||
+                $useragentinfo['browser'] === 'safari' && $useragentinfo['version'] >= 10 ||
+                $useragentinfo['browser'] === 'edge' && $useragentinfo['version'] >= 15) {
                 $cspheader .= '; base-uri'.$this->baseuri;
             }
         }
 
-        // Experimental:
+        // Candidate Recommendation:
         if ($this->upgradeinsecurerequests) {
             if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 43 ||
                 $useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 42 ||
                 $useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 30) {
-                // Not supported on Edge and Safari.
+                // Not supported yet on Edge and not supported under Safari.
                 $cspheader .= '; upgrade-insecure-requests';
             }
         }
 
         if ($this->blockmixedcontent) {
-            if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 56) {
-                // Worked on Chromium 56.0.2915
+            if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 56 ||
+                $useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 48) {
+                // Tested to worked under Chromium 56.0.2915.
                 $cspheader .= '; block-all-mixed-content';
+            }
+        }
+
+        if (!empty($this->requiresrifor)) {
+            if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 54 ||
+                $useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] > 49
+            ) {
+                // Firefox 49 needs security.csp.experimentalEnabled set to true.
+                $cspheader .= '; require-sri-for'.$this->requiresrifor;
             }
         }
 
@@ -947,8 +961,8 @@ class CSPGenerator {
     }
 
     /**
-     * Set reflected-xss Policy Content Security Policy Level 2 directive.
-     * Status: Candidate Recommendation.
+     * Set X-XSS-Protection header, the cross site request webbrowser blacklist.
+     * Status: decreated/removed experimental directive.
      *
      * @param string $reflectedxss The reflected-xss policy. This can be:
      *                             "allow" no url filtering, does the same as X-XSS-Protection: 0;
@@ -966,23 +980,20 @@ class CSPGenerator {
     }
 
     /**
-     * Set a fully qualified domain names to require Subresource Integrity(SRI) for 
-     * with this Content Security Policy Level 3 directive.
+     * Require scripts or stylesheets to have Subresource Integrity(SRI) hashes.
      * Status: Working Draft.
      * 
-     * @param string $fqdn A fully qualified domain name.
+     * @param string $resource Can be "script" and/or "style".
      */
-    public function setRequireSRIfor($fqdn)
+    public function setRequireSRIfor($resource)
     {
-        if (empty($fqdn)) {
-            throw new InvalidArgumentException('No fully qualified domain name value provided.');
-        } elseif (!$this->isValidFQDN($fqdn)) {
-            throw new InvalidArgumentException('Given value cannot be a valid fully qualified domain name.');
+        $resource = strtolower($resource);
+        if ($resource !== 'script' && $resource !== 'style') {
+            throw new InvalidArgumentException('$resource needs to be script or style.');
         }
 
-        $fqdnwithspaceprefix = ' '.$fqdn;
-        if (strpos($this->requiredsrifqdns, $fqdnwithspaceprefix) === false) {
-            $this->requiredsrifqdns .= $fqdnwithspaceprefix;
+        if (strpos($this->requiresrifor, $resource) === false) {
+            $this->requiresrifor .= ' '.$resource;
         }
     }
 
@@ -1044,11 +1055,11 @@ class CSPGenerator {
      *
      * @param string $fqdnvalue
      * @return bool True if fqdnvalue is a valid fully qualified domain name.
-     */
     private function isValidFQDN($fqdnvalue)
     {
         return (preg_match("/^([a-z\d](-*[a-z\d])*)(\.([a-z\d](-*[a-z\d])*))*$/i", $fqdnvalue) &&
                 preg_match("/^.{1,253}$/", $fqdnvalue) &&
                 preg_match("/^[^\.]{1,63}(\.[^\.]{1,63})*$/", $fqdnvalue));
     }
+     */
 }
