@@ -352,11 +352,16 @@ class CSPGenerator {
             $cspheader .= '; object-src'.$this->objectsrc;
         }
 
-        // Experimental:
-        if (!empty($this->plugintypes)) {
-            if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 27 ||
-                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 40) {
-                $cspheader .= '; plugin-types'.$this->plugintypes;
+        if (!empty($this->objectsrc) || 
+            (!empty($this->defaultsrc) && strpos($this->defaultsrc, "'none'") === false)) {
+            // CSP 2.0:
+            if (!empty($this->plugintypes)) {
+                if ($useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 27 ||
+                    $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 40 ||
+                    $useragentinfo['browser'] === 'edge' && $useragentinfo['version'] >= 15 ||
+                    $useragentinfo['browser'] === 'safari' && $useragentinfo['version'] >= 10) {
+                    $cspheader .= '; plugin-types'.$this->plugintypes;
+                }
             }
         }
 
@@ -1073,18 +1078,4 @@ class CSPGenerator {
 
         return true;
     }
-
-    /**
-     * Check if the provide value is a valid fully qualified domain name.
-     * original code from http://stackoverflow.com/questions/1755144/how-to-validate-domain-name-in-php
-     *
-     * @param string $fqdnvalue
-     * @return bool True if fqdnvalue is a valid fully qualified domain name.
-    private function isValidFQDN($fqdnvalue)
-    {
-        return (preg_match("/^([a-z\d](-*[a-z\d])*)(\.([a-z\d](-*[a-z\d])*))*$/i", $fqdnvalue) &&
-                preg_match("/^.{1,253}$/", $fqdnvalue) &&
-                preg_match("/^[^\.]{1,63}(\.[^\.]{1,63})*$/", $fqdnvalue));
-    }
-     */
 }
