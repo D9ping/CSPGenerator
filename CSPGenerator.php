@@ -173,7 +173,7 @@ class CSPGenerator {
         } elseif (strpos($this->frameancestors, ' *') >= 0) {
             header('X-Frame-Options: ALLOW', true);
         } else {
-            // ALLOW-FROM Not supported in Chrome or Safari or Opera and any Firefox less than version 18.0 and any Internet Explorer browser less than version 9.0. (source: http://erlend.oftedal.no/blog/tools/xframeoptions/)
+            // check ALLOW-FROM support, source: http://erlend.oftedal.no/blog/tools/xframeoptions/
             if (($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 18) || 
                 ($useragentinfo['browser'] === 'msie' && $useragentinfo['version'] >= 9)) {
                 header('X-Frame-Options: ALLOW-FROM '.$this->frameancestors, true);
@@ -191,7 +191,8 @@ class CSPGenerator {
         // Add X-XSS-Protection header based on CSP 1.1 settings.
         switch ($this->reflectedxss) {
             case 'filter':
-                // filter is the prefered one, because mode=block can cause possible insecurity, source: http://homakov.blogspot.nl/2013/02/hacking-with-xss-auditor.html
+                // filter is the prefered one, because mode=block can cause possible insecurity, 
+                // source: http://homakov.blogspot.nl/2013/02/hacking-with-xss-auditor.html
                 header('X-XSS-Protection: 1', true);
                 break;
             case 'allow':
@@ -769,8 +770,11 @@ class CSPGenerator {
 
     /**
      * Add frame-src Content Security Policy 1.0 directive.
-     * Warning: frame-src is decreated in Content Security Policy Level 2 in favor of the child-src directive.
      *
+     * In CSP 3: frame-src is again the recommended directive for the policy of <frame> and <iframe> tags.
+     * In CSP 2: frame-src is decreated in CSP 2.0 in favor of the child-src directive that
+                 also set the policy for webworker sources.
+     * In CSP 1: frame-src s the recommended directive for  <frame> and <iframe>.
      * @param string $framesrc The frame-src policy directive to add. Where to allow to load frames/iframe from.
      */
     public function addFramesrc($framesrc)
@@ -801,12 +805,13 @@ class CSPGenerator {
     }
 
     /**
+     * Status: decreated since CSP 3.
      * Add the child-src Content Security Policy Level 2 directive.
      * This directive also applies to the decreated frame-src directive.
-     * Status: decreated.
      *
-     * @param string $childsrc The child-src policy directive to add. Where webworkers and
-     *                         frames/iframe are allowed to load from.
+     * @param string $childsrc The child-src policy directive to add. Where webworkers
+     *                         (worker-src does this also) and frames/iframe are allowed 
+     *                          to load from.
      */
     public function addChildsrc($childsrc)
     {
@@ -871,8 +876,9 @@ class CSPGenerator {
      * Add the plugin-types Content Security Policy Level 2 directive.
      * Status: Candidate Recommendation.
      *
-     * @param string $plugintypes The plugin-types policy directive to add. A list of MIME types
-     *         (e.g. application/x-shockwave-flash, application/pdf) of plugins allowed to load.
+     * @param string $plugintypes The plugin-types policy directive to add. A list of MIME
+     *                            types (e.g. application/x-shockwave-flash, application/pdf)
+     *                            of plugins allowed to load.
      */
     public function addPlugintypes($plugintypes)
     {
@@ -922,7 +928,9 @@ class CSPGenerator {
      * Add sandbox options to the sandbox Content Security Policy 1.0 directive.
      * Status: Candidate Recommendation.
      *
-     * @param string $sandboxoption The sandbox policy directive to add. This can be: allow-forms, allow-pointer-lock, allow-popups, allow-same-origin, allow-scripts or allow-top-navigation.
+     * @param string $sandboxoption The sandbox policy directive to add. This can be:
+     *                              allow-forms, allow-pointer-lock, allow-popups,
+     *                              allow-same-origin, allow-scripts or allow-top-navigation.
      */
     public function addSandboxoption($sandboxoption)
     {
@@ -996,7 +1004,8 @@ class CSPGenerator {
      *
      * @param string $reflectedxss The reflected-xss policy. This can be:
      *                             "allow" no url filtering, does the same as X-XSS-Protection: 0;
-     *                             "filter" filter detected unsafe url and display warning bar(with unsafe reload option) does the same as X-XSS-Protection: 1;
+     *                             "filter" filter detected unsafe url and display warning
+     *                             bar(with unsafe reload option) does the same as X-XSS-Protection: 1;
      *                             "block" block with about:blank. Does the same as  X-XSS-Protection: 1; mode=block;
      */
     public function setReflectedxss($reflectedxss)
@@ -1072,7 +1081,8 @@ class CSPGenerator {
     {
         if (strpos($directivevalue, ';') !== false ||
             strpos($directivevalue, "\n") !== false ||
-            strpos($directivevalue, "\r") !== false) {
+            strpos($directivevalue, "\r") !== false ||
+            strpos($directivevalue, "\t") !== false) {
             return false;
         }
 
