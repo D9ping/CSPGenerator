@@ -87,7 +87,7 @@ class CSPGenerator {
     /**
      * Create a new instance of CSPGenerator class.
      */
-    private function __construct()
+    public function __construct()
     {
     }
 
