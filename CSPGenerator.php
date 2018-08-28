@@ -147,7 +147,8 @@ class CSPGenerator {
      * policy violations reports could be send by the webbrowser with consent from the user.
      * (e.g. Set this only to true if some consent cookie is available with the required value.)
      *
-     * @param bool $consent Is consent given, if true this will allow setting the reportTo/reporturi directive.
+     * @param bool $consent Is consent given, if true this will allow setting the 
+     *                      reportTo/reporturi directive.
      */
     public function setReportConsent($consent)
     {
@@ -242,17 +243,20 @@ class CSPGenerator {
             $cspheader = 'Content-Security-Policy-Report-Only: ';
         }
 
-        if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] <= 22 && $useragentinfo['version'] >= 3.7) {
+        if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] <= 22 &&
+            $useragentinfo['version'] >= 3.7) {
             if ($this->reportonly) {
                 $cspheader = 'X-Content-Security-Policy-Report-Only: ';
             } else {
                 $cspheader = 'X-Content-Security-Policy: ';
             }
 
-            // X-Content-Security-Policy: uses allow instead of default-src.
+            // Old X-Content-Security-Policy uses allow directive instead of default-src directive.
             $cspheader .= 'allow '.$this->defaultsrc;
-        } elseif ( ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] <= 24 && $useragentinfo['version'] >= 14) || 
-                   ($useragentinfo['browser'] === 'safari' && $useragentinfo['version'] >= 6 && $useragentinfo['version'] < 7) ) {
+        } elseif ( ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] <= 24 &&
+                    $useragentinfo['version'] >= 14) || 
+                   ($useragentinfo['browser'] === 'safari' && $useragentinfo['version'] >= 6 &&
+                    $useragentinfo['version'] < 7) ) {
             // Safari 5.0/5.1 X-WebKit-CSP implementation is badly broken it blocks 
             // permited whitelisted things so it's not usable at all.
             if ($this->reportonly) {
@@ -285,7 +289,7 @@ class CSPGenerator {
                 $cspheader .= " 'nonce-".$this->scriptsrcnonce."'";
             }
 
-            // for inline script with the X-Content-Security-Policy header use 'options inline-script'.
+            // For inline script the X-Content-Security-Policy header uses 'options inline-script'.
             if ($useragentinfo['browser'] === 'firefox' &&
                 $useragentinfo['version'] <= 22 && $useragentinfo['version'] >= 3.7) {
                 if (strpos($this->scriptsrc, "'unsafe-inline'") >= 0) {
@@ -301,7 +305,8 @@ class CSPGenerator {
 
         if (!empty($this->connectsrc)) {
             // The decreated X-Content-Security-Policy header uses xhr-src instead of connect-src.
-            if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] <= 22 && $useragentinfo['version'] >= 3.7) {
+            if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] <= 22 && 
+                $useragentinfo['version'] >= 3.7) {
                 $cspheader .= '; xhr-src'.$this->connectsrc;
             } else {
                 $cspheader .= '; connect-src'.$this->connectsrc;
@@ -375,7 +380,7 @@ class CSPGenerator {
             }
         }
 
-        // Decreated in CSP:
+        // Decreated in CSP, moved to seperate header.
         if (!empty($this->referrerpolicy)) {
             if ($useragentinfo['browser'] === 'firefox' &&
                 $useragentinfo['version'] >= 37 && $useragentinfo['version'] < 50) {
@@ -428,7 +433,7 @@ class CSPGenerator {
             if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 54 ||
                 $useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 49
             ) {
-                // Firefox 49 till 60 needs security.csp.experimentalEnabled set to true
+                // Firefox 49 till 62? needs security.csp.experimentalEnabled set to true
                 // for this CSP 3.0 directive to work.
                 $cspheader .= '; require-sri-for'.$this->requiresrifor;
             }
@@ -466,8 +471,7 @@ class CSPGenerator {
             if (strpos($useragent, 'Trident/') >= 0) {
                 // IE 11 does not have msie in user-agent header anymore, IE developers want forcing
                 // feature detecting with javascript. This is not for HTTP headers possible, 
-                // because then the headers are already send. 
-                // source: http://blogs.msdn.com/b/ieinternals/archive/2013/09/21/internet-explorer-11-user-agent-string-ua-string-sniffing-compatibility-with-gecko-webkit.aspx
+                // because then the headers are already send. source: https://t.co/7xw2nYUXFl
                 return array('browser' => 'msie', 'version' => 11);
             } else {
                 // Unknown browser.
@@ -475,8 +479,9 @@ class CSPGenerator {
             }
         }
 
-        // Since some UAs have more than one phrase (e.g Firefox has a Gecko phrase, Opera 7,8 have a MSIE phrase), 
-        // use the last one found (the right-most one in the UA). That's usually the most correct.
+        // Since some UAs have more than one phrase (e.g Firefox has a Gecko phrase,
+        // Opera 7,8 have a MSIE phrase),  use the last one found (the right-most one in the UA). 
+        // That's usually the most correct.
         $i = count($matches['browser']) - 1;
         $secondlast = 0;
         if ($i >= 2) {
@@ -548,13 +553,15 @@ class CSPGenerator {
 
     /**
      * Add script-src Content Security Policy 1.0 directive.
-     * In Content Security Policy 1.1 and Level 2, the use of 'none-$nonce' and 'sha256-$hash' is allowed for whitelisted inline scripts.
-     * 'unsafe-inline' can be ignored by user-agent because it's so unsafe.
-     * The following Content Security Policy Level 3 special directives are allowed:
+     * In Content Security Policy 1.1 and Level 2, the use of 'none-$nonce' and 'sha256-$hash' is
+     * allowed for whitelisted inline scripts. 'unsafe-inline' can be ignored by user-agent because 
+     * it's so unsafe. The following Content Security Policy Level 3 special directives are allowed:
      * 'strict-dynamic' will allow scripts to load their dependencies without them having to be whitelisted.
-     * 'unsafe-hashed-attributes'  will allow event handlers to whitelisted based on their hash.
+     * 'unsafe-hashed-attributes' will allow event handlers to whitelisted based on their hash.
      *
-     * @param string $scriptsrc The script-src policy directive to add. Use 'unsafe-inline' to allow unsafe loading of iniline scripts, use 'unsafe-eval' to allow text-to-JavaScript mechanisms like eval.
+     * @param string $scriptsrc The script-src policy directive to add. Use 'unsafe-inline' to
+     *                          allow unsafe loading of iniline scripts, use 'unsafe-eval' to allow
+     *                          text-to-JavaScript mechanisms like eval.
      */
     public function addScriptsrc($scriptsrc)
     {
@@ -586,8 +593,9 @@ class CSPGenerator {
      * @param bool $enablenonce Is the use of a nonces enabled for allowing inline scripts. 
      *                          Set to true to add a random 'nonce-$random' to script-src directive
      *                          and set to false to remove 'nonce-$random' from the script-src directive.
-     * @param int  $noncelength The length of the new nonce. It's recommended to use (at least)128 bits nonces.
-      *                         With the use of all ASCII printable characters you get about 6.570 bits entropy per character.
+     * @param int  $noncelength The length of the new nonce. It's recommended to use 
+     *                          (at least)128 bits nonces. With the use of all ASCII printable 
+     *                          characters you get about 6.570 bits entropy per character.
      */
     public function setScriptsrcNonce($enablenonce = true, $noncelength = 20)
     {
@@ -616,7 +624,8 @@ class CSPGenerator {
      * @param bool $enablenonce Is the use of a nonces enabled for allowing inline styles. 
      *                          Set to true to add a random 'nonce-$random' to style-src directive
      *                          and set to false to remove 'nonce-$random' from the style-src directive.
-     * @param int  $noncelength The length of the new nonce. It's recommended to use (at least)128 bits nonces.
+     * @param int  $noncelength The length of the new nonce. It's recommended to use (at least)128 
+     *                          bits nonces.
      *                          With the use of all ASCII printable characters you get
      *                          about 6.570 bits entropy per character.
      */
@@ -660,13 +669,16 @@ class CSPGenerator {
     private function generateNonce($noncelength)
     {
         if ($noncelength < self::NONCEMINLENGTH) {
-            throw new InvalidArgumentException(sprintf('The nonce length needs to be at least %1$d characters.', self::NONCEMINLENGTH));
+            throw new InvalidArgumentException(sprintf(
+                'The nonce length needs to be at least %1$d characters.', self::NONCEMINLENGTH));
         }
 
-        if (function_exists('random_bytes')) { // random_bytes is added in PHP 7.0. An userland implementation could be available for lower php versions.
+        // An random_bytes userland implementation is available for PHP <7.0.
+        if (function_exists('random_bytes')) {  
             return substr(base64_encode(random_bytes($noncelength)), 0, $noncelength);
         } elseif (function_exists('mcrypt_create_iv')) {
-            return substr(base64_encode(mcrypt_create_iv($noncelength, MCRYPT_DEV_URANDOM)), 0, $noncelength);
+            return substr(base64_encode(mcrypt_create_iv($noncelength, MCRYPT_DEV_URANDOM)),
+                                        0, $noncelength);
         } elseif (function_exists('openssl_random_pseudo_bytes')) {
             return substr(base64_encode(openssl_random_pseudo_bytes($noncelength)), 0, $noncelength);
         } else {
@@ -706,7 +718,8 @@ class CSPGenerator {
      * Add connect-src Content Security Policy 1.0 directive.
      * Status: Candidate Recommendation.
      *
-     * @param string $connectsrc The connect-src policy directive to add. Where to allow XMLHttpRequest to connect to.
+     * @param string $connectsrc The connect-src policy directive to add.
+     *                           Where XMLHttpRequest is allowed to connect to.
      */
     public function addConnectsrc($connectsrc)
     {
@@ -723,7 +736,8 @@ class CSPGenerator {
      * Add media-src Content Security Policy 1.0 directive.
      * Status: Candidate Recommendation.
      *
-     * @param string $mediasrc The media-src policy directive to add. Where to allow to load video/audio sources from. Use mediastream: for the MediaStream API. 
+     * @param string $mediasrc The media-src policy directive to add. Where to allow to load 
+     *                         video/audio sources from. Use mediastream: for the MediaStream API. 
      */
     public function addMediasrc($mediasrc)
     {
@@ -755,7 +769,8 @@ class CSPGenerator {
      * Add font-src Content Security Policy 1.0 directive.
      * Status: Candidate Recommendation.
      *
-     * @param string $fontsrc The font-src policy directive to add. Where to allow to load font files from.
+     * @param string $fontsrc The font-src policy directive to add. 
+     *                        Where to allow to load font files from.
      */
     public function addFontsrc($fontsrc)
     {
@@ -773,9 +788,10 @@ class CSPGenerator {
      *
      * In CSP 3: frame-src is again the recommended directive for the policy of <frame> and <iframe> tags.
      * In CSP 2: frame-src is decreated in CSP 2.0 in favor of the child-src directive that
-                 also set the policy for webworker sources.
+     *           also set the policy for webworker sources.
      * In CSP 1: frame-src s the recommended directive for  <frame> and <iframe>.
-     * @param string $framesrc The frame-src policy directive to add. Where to allow to load frames/iframe from.
+     * @param string $framesrc The frame-src policy directive to add. 
+     *                         Where to allow to load frames/iframe from.
      */
     public function addFramesrc($framesrc)
     {
@@ -805,8 +821,8 @@ class CSPGenerator {
     }
 
     /**
-     * Status: decreated since CSP 3.
-     * Add the child-src Content Security Policy Level 2 directive.
+     * Status: decreated in CSP 3.
+     * the child-src is a Content Security Policy Level 2 directive.
      * This directive also applies to the decreated frame-src directive.
      *
      * @param string $childsrc The child-src policy directive to add. Where webworkers
@@ -815,7 +831,7 @@ class CSPGenerator {
      */
     public function addChildsrc($childsrc)
     {
-        error_log('Decreated child-src used, replace calls to addChildsrc with: addFramesrc or addWorkersrc.');
+        error_log('Decreated child-src used, replace addChildsrc with addWorkersrc or addFramesrc.');
         if (!$this->isValidDirectiveValue($childsrc)) {
             throw new InvalidArgumentException('childsrc value invalid');
         }
@@ -950,17 +966,34 @@ class CSPGenerator {
     }
 
     /**
-     * Set the referrer policy. This directive will change the behavoir how the user-agent sends the referrer(Mispelled HTTP header field: referer).
+     * Set the referrer policy. This directive will change the behavoir how the user-agent 
+     * sends the referrer(Mispelled HTTP header field: referer).
      * Status: Working Draft.
      *
      * @param string $referrerpolicy The referrer policy can be one of these values:
-     *                               "no-referrer"(obsolete policy name: "never"), do not send any http referrer header at all. Most privacy friendly, but not good choice as weak protection if implemented against CSRF.
-     *                               "no-referrer-when-downgrade"(obsolete policy name: "default"), default bevavior when no policy. Will send the full referrer but do not send referrer header when coming from https to protect you from dislosing your session url.
-     *                               "origin" only send the domain(e.g. www.example.tld) and not the uri(e.g. /page2.htm). A bit more privacy friendly than the full referrer but not when going from https to http.
-     *                               "strict-origin" send the domain(e.g. www.exmaple.tld) and also for navigating to subdomain(e.g. not.example.tld). But never send and the uri(the page).
-     *                               "origin-when-cross-origin" Only send origin when going to a different origin but not when going from https to http.
-     *                               "strict-origin-when-cross-origin" Send origin when going to a different origin and send only origin when going to subdomain. Do send full url when navigating on same origin. But do not send any referrer when going from https to http on any origin.
-     *                               "unsafe-url"(obsolete policy name: "always"). Will always send the full referrer. This will also send the full referrer on HTTP when coming from a HTTPS site and that can be a security(session urls) and privacy issue.
+     *                               "no-referrer"(obsolete policy name: "never"), do not send any 
+     *                                 http referrer header at all. Most privacy friendly, but not 
+     *                                 good choice as weak protection if implemented against CSRF.
+     *                               "no-referrer-when-downgrade"(obsolete policy name: "default"),
+     *                                 default bevavior when no policy. Will send the full referrer 
+     *                                 but do not send referrer header when coming from https to 
+     *                                 protect you from dislosing your session url.
+     *                               "origin" only send the domain(e.g. www.example.tld) and not 
+     *                                 the uri(e.g. /page2.htm). A bit more privacy friendly than the 
+     *                                 full referrer but not when going from https to http.
+     *                               "strict-origin" send the domain(e.g. www.exmaple.tld) and also 
+     *                                 for navigating to subdomain(e.g. not.example.tld). 
+     *                                 But never send leaving current domain.
+     *                               "origin-when-cross-origin" Only send origin when going to a
+     *                                 different origin but not when going from https to http.
+     *                               "strict-origin-when-cross-origin" Send origin when going to a 
+     *                                 different origin and send only origin when going to subdomain. 
+     *                                 Do send full url when navigating on same origin. But do not 
+     *                                 send any referrer when going from https to http on any origin.
+     *                               "unsafe-url"(obsolete policy name: "always"). Will always send
+     *                                 the full referrer. This will also send the full referrer on
+     *                                 HTTP when coming from a HTTPS site and that can be a security 
+     *                                 issue for url's with session GET parameter and a privacy issue.
      */
     public function setReferrerPolicy($referrerpolicy)
     {
@@ -1006,7 +1039,8 @@ class CSPGenerator {
      *                             "allow" no url filtering, does the same as X-XSS-Protection: 0;
      *                             "filter" filter detected unsafe url and display warning
      *                             bar(with unsafe reload option) does the same as X-XSS-Protection: 1;
-     *                             "block" block with about:blank. Does the same as  X-XSS-Protection: 1; mode=block;
+     *                             "block" block with about:blank. Does the same as
+     *                              X-XSS-Protection: 1; mode=block;
      */
     public function setReflectedxss($reflectedxss)
     {
@@ -1038,12 +1072,14 @@ class CSPGenerator {
 
     /**
      * Set the Upgrade-Insecure-Requests policy directive.
-     * This directive makes the user-agent rewrite all resources starting with http:// request httpS:// resources on the page.
+     * This directive makes the user-agent rewrite all url's starting with http:// 
+     * request to url's starting with httpS:// on the page.
      * Specifications: http://www.w3.org/TR/upgrade-insecure-requests/
      * Demo page: https://googlechrome.github.io/samples/csp-upgrade-insecure-requests/index.html
      * Status: Candidate Recommendation.
      *
-     * @param bool Should the upgrade-insecure-requests directive been added to the content security policy header.
+     * @param bool Should the upgrade-insecure-requests directive been added to the 
+     *             content security policy header.
      */
     public function setUpgradeInsecureRequests($upgradeinsecurerequests = true)
     {
@@ -1060,7 +1096,8 @@ class CSPGenerator {
      * could still be not blocked. Passive content is: <img> src, <audio> src and <video> src.
      * Status: Candidate recommendation:.
      *
-     * @param bool $blockmixedcontent True to never load any content(strict mode) over http:// on the current page if loaded over https.
+     * @param bool $blockmixedcontent True to never load any content(strict mode) over http:// on 
+     *                                the current page if loaded over https.
      */
     public function setBlockMixedContent($blockmixedcontent = true)
     {
