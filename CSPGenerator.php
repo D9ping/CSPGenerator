@@ -66,6 +66,8 @@ class CSPGenerator {
 
     private $objectsrc = '';
 
+    private $prefetchsrc = '';
+
     private $plugintypes = '';
 
     private $formaction = " 'self'";
@@ -356,6 +358,15 @@ class CSPGenerator {
         if (!empty($this->objectsrc)) {
             // CSP 1.0
             $cspheader .= '; object-src'.$this->objectsrc;
+        }
+
+        if (!empty($this->prefetchsrc)) {
+            // In CSP 3.0 (Working Draft), 
+            // on chrome 69 the implemented behind a flag which is disabled.
+            if ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 69 ||
+                $useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 65) {
+                $cspheader .= '; prefetch-src'.$this->prefetchsrc;
+            }
         }
 
         if (!empty($this->objectsrc) || 
@@ -905,6 +916,20 @@ class CSPGenerator {
         if (strpos($this->plugintypes, $plugintypes) === false) {
             $this->plugintypes .= ' '.$plugintypes;
         }
+    }
+
+    /**
+     * Add a new prefetch-src Content Security Policy 3 directive.
+     *
+     * @param string $prefetchsrc The prefetch-src policy directive to add.
+     */
+    public function addPrefetchsrc($prefetchsrc)
+    {
+        if (!$this->isValidDirectiveValue($prefetchsrc)) {
+            throw new InvalidArgumentException('prefetchsrc value invalid');
+        }
+
+        $this->prefetchsrc .= ' '.$prefetchsrc;
     }
 
     /**
