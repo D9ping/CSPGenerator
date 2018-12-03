@@ -478,6 +478,7 @@ class CSPGenerator {
         $useragent = strtolower($_SERVER['HTTP_USER_AGENT']);
         $pattern = '#(?<browser>'.join('|', $browsers) .')[/ ]+(?<version>[0-9]+(?:\.[0-9]+)?)#';
         // Find all phrases (or return empty array if none found)
+        $matches = array();
         if (!preg_match_all($pattern, $useragent, $matches)) {
             if (strpos($useragent, 'Trident/') >= 0) {
                 // IE 11 does not have msie in user-agent header anymore, IE developers want forcing
