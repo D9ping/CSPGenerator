@@ -1,6 +1,6 @@
 <?php 
 /*
-Copyright (c) 2014-2018, Tom
+Copyright (c) 2014-2019, Tom
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted 
@@ -326,9 +326,10 @@ class CSPGenerator {
         }
 
         if (!empty($this->fontsrc)) {
-            // TODO Lookup what version Chrome added support for font-src.
-            // CSP 1.0
-            $cspheader .= '; font-src'.$this->fontsrc;
+            if ($useragentinfo['browser'] !== 'chrome' || 
+                ($useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 25)) {
+                $cspheader .= '; font-src'.$this->fontsrc;
+            }
         }
 
         if (empty($this->workersrc) && empty($this->framesrc)) {
