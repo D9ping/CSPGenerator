@@ -267,9 +267,9 @@ class CSPGenerator {
                 $cspheader = 'X-WebKit-CSP: ';
             }
 
-            $cspheader .= 'default-src'.$this->defaultsrc;
+            $cspheader .= 'default-src '.$this->defaultsrc;
         } else {
-            $cspheader .= 'default-src'.$this->defaultsrc;
+            $cspheader .= 'default-src '.$this->defaultsrc;
         }
 
         if (!empty($this->stylesrc)) {
