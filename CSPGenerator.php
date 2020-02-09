@@ -1,6 +1,6 @@
 <?php 
 /*
-Copyright (c) 2014-2019, Tom
+Copyright (c) 2014-2020, Tom
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted 
@@ -343,6 +343,15 @@ class CSPGenerator {
             if (!empty($this->framesrc)) {
                 // CSP 1.0 directive, decreated in CSP 2.0 and Undeprecate in CSP 3.0.
                 $cspheader .= '; frame-src'.$this->framesrc;
+                // To avoid unexpected issues we make sure mailto: and tel: links just work on all browsers.
+                if ($useragentinfo['browser'] === 'edge') {
+                    // Edge blocks tel: but not mailto:
+                    // Also custom error pages(500 etc.) are blocked/blank unless ms-appx-web: https: and data: is allowed.
+                    $cspheader .= ' tel: data: ms-appx-web:';
+                } elseif ($useragentinfo['browser'] !== 'firefox') {
+                    // Chromes and opera but not firefox block mailto: and tel: links.
+                    $cspheader .= ' mailto: tel:';
+                }
             }
 
             if (!empty($this->workersrc)) {
