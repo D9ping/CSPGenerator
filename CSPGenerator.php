@@ -64,6 +64,8 @@ class CSPGenerator {
 
     private $frameancestors = '';
 
+    private $navigateto = '';
+
     private $objectsrc = '';
 
     private $prefetchsrc = '';
@@ -378,6 +380,11 @@ class CSPGenerator {
                 $cspheader .= '; prefetch-src'.$this->prefetchsrc;
             }
         }
+
+        //if (!empty($this->navigateto)) {
+            // In CSP 3.0 (Working Draft)
+            // no webbrowser support at the moment, do nothing.
+        //}
 
         if (!empty($this->objectsrc) || 
             (!empty($this->defaultsrc) && strpos($this->defaultsrc, "'none'") === false)) {
@@ -941,6 +948,22 @@ class CSPGenerator {
         }
 
         $this->prefetchsrc .= ' '.$prefetchsrc;
+    }
+
+    /**
+     * Add navigate-to Content Security Policy 3 directive.
+     * This restricts e.g.: links/a, forms/form action, document.location and window.open.
+     * Status: draft
+     *
+     * @param string $navigateto The allowed domain.
+     */
+    public function addNavigateTo($navigateto)
+    {
+        if (!$this->isValidDirectiveValue($navigateto)) {
+            throw new InvalidArgumentException('navigateto value invalid');
+        }
+
+        $this->navigateto .= ' '.$navigateto;
     }
 
     /**
