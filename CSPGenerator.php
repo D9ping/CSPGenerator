@@ -77,6 +77,7 @@ class CSPGenerator {
     private $sandboxoptions = '';
 
     private $referrerpolicy = '';
+    private $referrerPolicyAdvance = false;
 
     private $requiresrifor = '';
 
@@ -109,7 +110,7 @@ class CSPGenerator {
 
     /**
      * Set the url to where to report violations of the Content Security Policy.
-     * Will also set the decreated report-uri Content Security Policy directive.
+     * Will also set the deprecated report-uri Content Security Policy directive.
      * GDPR:
      * Consent may be needed in EU under GDPR, for the data that could possibly identify a persons by 
      * the combination user-agent and other browser details and the possible webbrowser extension(s) causing
@@ -128,13 +129,13 @@ class CSPGenerator {
     }
 
     /**
-     * Decreated function, replaced by setReportTo function.
+     * Deprecated function, replaced by setReportTo function.
      *
      * @param string $reporturi The uri to report the Content Security Policy violation reports on.
      */
     public function setReporturi($reporturi)
     {
-        error_log('Called decreated setReporturi function. Replace this with setReportTo.');
+        error_log('Called deprecated setReporturi function. Replace this with setReportTo.');
         $this->setReportTo($reporturi);
     }
 
@@ -161,7 +162,8 @@ class CSPGenerator {
 
     /**
      * Parse user-agent header and set proper Content Security Policy header,
-     * X-Frame-Options header and X-XSS-Protection header based on the browser and browser version.
+     * X-Frame-Options, Referrer-Policy and X-XSS-Protection HTTP header based on 
+     * the web browser and the version of the web browser.
      */
     public function Parse()
     {
@@ -186,11 +188,20 @@ class CSPGenerator {
         }
 
         if (!empty($this->referrerpolicy)) {
-            if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 50 ||
-                $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 56 ||
-                $useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 48) {
-                header('Referrer-Policy: '.$this->referrerpolicy, true);
+            if ($this->referrerPolicyAdvance) {
+                if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 52 ||
+                    $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 61 ||
+                    $useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 48) {
+                    header('Referrer-Policy: '.$this->referrerpolicy, true);
+                }
+            } else {
+                if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] >= 50 ||
+                    $useragentinfo['browser'] === 'chrome' && $useragentinfo['version'] >= 56 ||
+                    $useragentinfo['browser'] === 'opr' && $useragentinfo['version'] >= 43) {
+                    header('Referrer-Policy: '.$this->referrerpolicy, true);
+                }
             }
+
         }
 
         // Add X-XSS-Protection header based on CSP 1.1 settings.
@@ -275,7 +286,7 @@ class CSPGenerator {
         }
 
         if (!empty($this->stylesrc)) {
-            // The obsolete decreated X-Content-Security-Policy header does not
+            // The obsolete deprecated X-Content-Security-Policy header does not
             // support style-src. This is not implemented.
             $cspheader .= '; style-src'.$this->stylesrc;
             if (!empty($this->stylesrcnonce)) {
@@ -293,7 +304,7 @@ class CSPGenerator {
                 $cspheader .= " 'nonce-".$this->scriptsrcnonce."'";
             }
 
-            // For inline script the X-Content-Security-Policy header uses 'options inline-script'.
+            // For in-line script the X-Content-Security-Policy header uses 'options inline-script'.
             if ($useragentinfo['browser'] === 'firefox' &&
                 $useragentinfo['version'] <= 22 && $useragentinfo['version'] >= 3.7) {
                 if (strpos($this->scriptsrc, "'unsafe-inline'") >= 0) {
@@ -308,7 +319,7 @@ class CSPGenerator {
         }
 
         if (!empty($this->connectsrc)) {
-            // The decreated X-Content-Security-Policy header uses xhr-src instead of connect-src.
+            // The deprecated X-Content-Security-Policy header uses xhr-src instead of connect-src.
             if ($useragentinfo['browser'] === 'firefox' && $useragentinfo['version'] <= 22 && 
                 $useragentinfo['version'] >= 3.7) {
                 $cspheader .= '; xhr-src'.$this->connectsrc;
@@ -336,14 +347,14 @@ class CSPGenerator {
 
         if (empty($this->workersrc) && empty($this->framesrc)) {
             if (!empty($this->childsrc)) {
-                // Decreated, only CSP Level 2:
+                // Deprecated, only CSP Level 2:
                 if ($useragentinfo['browser'] === 'chrome' || $useragentinfo['version'] >= 45) {
                     $cspheader .= '; child-src'.$this->childsrc;
                 }
             }
         } else {
             if (!empty($this->framesrc)) {
-                // CSP 1.0 directive, decreated in CSP 2.0 and Undeprecate in CSP 3.0.
+                // CSP 1.0 directive, deprecated in CSP 2.0 and readded in CSP 3.0.
                 $cspheader .= '; frame-src'.$this->framesrc;
                 // To avoid unexpected issues we make sure mailto: and tel: links just work on all browsers.
                 if ($useragentinfo['browser'] === 'edge') {
@@ -408,11 +419,13 @@ class CSPGenerator {
             }
         }
 
-        // Decreated in CSP, moved to seperate header.
+        // deprecated in CSP, moved to separate header.
         if (!empty($this->referrerpolicy)) {
-            if ($useragentinfo['browser'] === 'firefox' &&
-                $useragentinfo['version'] >= 37 && $useragentinfo['version'] < 50) {
-                // Decreated in CSP, do not send as CSP but as seperate http header.
+            if (($useragentinfo['browser'] === 'firefox' &&
+                 $useragentinfo['version'] >= 37 && $useragentinfo['version'] < 62) ||
+                ($useragentinfo['browser'] === 'chrome' &&
+                 $useragentinfo['version'] >= 33 && $useragentinfo['version'] < 56)) {
+                // Deprecated in CSP, do not send as CSP but as separate Referrer-Policy HTTP header.
                 $cspheader .= '; referrer '.$this->referrerpolicy;
             }
         }
@@ -547,7 +560,7 @@ class CSPGenerator {
     /**
      * Add style-src Content Security Policy 1.0 directive.
      * In Content Security Policy Level 1.1 and Level 2, the use of 'none-$nonce' and 'sha256-$hash'
-     * is allowed for whitelisted inline style= use.
+     * is allowed for allowing in-line style= use.
      *
      * @param string $stylesrc The style-src policy directive to add. Where to allow CSS
      *                         files from use 'unsafe-inline' for style attributes in (X)HTML document.
@@ -583,9 +596,9 @@ class CSPGenerator {
     /**
      * Add script-src Content Security Policy 1.0 directive.
      * In Content Security Policy 1.1 and Level 2, the use of 'none-$nonce' and 'sha256-$hash' is
-     * allowed for whitelisted inline scripts. 'unsafe-inline' can be ignored by user-agent because 
+     * allowed for allowing in-line scripts. 'unsafe-inline' can be ignored by user-agent because 
      * it's so unsafe. The following Content Security Policy Level 3 special directives are allowed:
-     * 'strict-dynamic' will allow scripts to load their dependencies without them having to be whitelisted.
+     * 'strict-dynamic' will allow scripts to load their dependencies without them having to be included.
      * 'unsafe-hashed-attributes' will allow event handlers to whitelisted based on their hash.
      *
      * @param string $scriptsrc The script-src policy directive to add. Use 'unsafe-inline' to
@@ -702,7 +715,7 @@ class CSPGenerator {
                 'The nonce length needs to be at least %1$d characters.', self::NONCEMINLENGTH));
         }
 
-        // An random_bytes userland implementation is available for PHP <7.0.
+        // An random_bytes user-land implementation is available for PHP <7.0.
         if (function_exists('random_bytes')) {  
             return substr(base64_encode(random_bytes($noncelength)), 0, $noncelength);
         } elseif (function_exists('mcrypt_create_iv')) {
@@ -816,7 +829,7 @@ class CSPGenerator {
      * Add frame-src Content Security Policy 1.0 directive.
      *
      * In CSP 3: frame-src is again the recommended directive for the policy of <frame> and <iframe> tags.
-     * In CSP 2: frame-src is decreated in CSP 2.0 in favor of the child-src directive that
+     * In CSP 2: frame-src is shortly deprecated in CSP 2.0 in favor of the child-src directive that
      *           also set the policy for webworker sources.
      * In CSP 1: frame-src s the recommended directive for  <frame> and <iframe>.
      * @param string $framesrc The frame-src policy directive to add. 
@@ -850,9 +863,9 @@ class CSPGenerator {
     }
 
     /**
-     * Status: decreated in CSP 3.
+     * Status: deprecated in CSP 3.
      * the child-src is a Content Security Policy Level 2 directive.
-     * This directive also applies to the decreated frame-src directive.
+     * This directive also applies to the deprecated frame-src directive.
      *
      * @param string $childsrc The child-src policy directive to add. Where webworkers
      *                         (worker-src does this also) and frames/iframe are allowed 
@@ -860,7 +873,7 @@ class CSPGenerator {
      */
     public function addChildsrc($childsrc)
     {
-        error_log('Decreated child-src used, replace addChildsrc with addWorkersrc or addFramesrc.');
+        error_log('CSP 3.0 deprecated child-src used, replace addChildsrc with: addWorkersrc or addFramesrc.');
         if (!$this->isValidDirectiveValue($childsrc)) {
             throw new InvalidArgumentException('childsrc value invalid');
         }
@@ -1065,24 +1078,27 @@ class CSPGenerator {
             case 'no-referrer':
                 $this->referrerpolicy = 'no-referrer';
                 break;
-            case 'same-origin':
-                $this->referrerpolicy = 'same-origin';
+            case 'always':
+            case 'unsafe-url':
+                $this->referrerpolicy = 'unsafe-url';
                 break;
             case 'origin-when-cross-origin':
                 $this->referrerpolicy = 'origin-when-cross-origin';
                 break;
-            case 'strict-origin-when-cross-origin':
-                $this->referrerpolicy = 'strict-origin-when-cross-origin';
-                break;
             case 'origin':
                 $this->referrerpolicy = 'origin';
                 break;
+            case 'strict-origin-when-cross-origin':
+                $this->referrerpolicy = 'strict-origin-when-cross-origin';
+                $this->referrerPolicyAdvance = true;
+                break;
             case 'strict-origin':
                 $this->referrerpolicy = 'strict-origin';
+                $this->referrerPolicyAdvance = true;
                 break;
-            case 'always':
-            case 'unsafe-url':
-                $this->referrerpolicy = 'unsafe-url';
+            case 'same-origin':
+                $this->referrerpolicy = 'same-origin';
+                $this->referrerPolicyAdvance = true;
                 break;
             default:
                 throw new InvalidArgumentException('Referrer policy value unknown.');
@@ -1092,7 +1108,7 @@ class CSPGenerator {
 
     /**
      * Set X-XSS-Protection header, the cross site request webbrowser blacklist.
-     * Status: decreated/removed experimental directive.
+     * Status: deprecated in content security policy 3, use X-XSS-Protection instead.
      *
      * @param string $reflectedxss The reflected-xss policy. This can be:
      *                             "allow" no url filtering, does the same as X-XSS-Protection: 0;
