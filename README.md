@@ -13,7 +13,3 @@ add the following line just before you sending any content to the client.
 CSPGenerator::getInstance()->Parse();
 
 To learn more about how to add Content Security Policy directives to relax the default restrictive content security policy [see the examples](examples).
-
-### Support
-If you find CSPGenerator useful consider donating:
-[![Beerpay](https://beerpay.io/D9ping/CSPGenerator/badge.svg)](https://beerpay.io/D9ping/CSPGenerator)
